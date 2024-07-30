@@ -146,6 +146,53 @@ void main() {
     }
 }
 
+class SeparatorProgram extends LinkedWebGLProgram {
+    static VS_SOURCE = `${VS_HEADER}
+uniform float uLineWidth;
+
+//Truth Table for square of two triangles:
+//
+//| idx |  x  |   y |
+//|-----|-----|-----|
+//|  0  | -1  | -1  |
+//|  1  |  1  | -1  |
+//|  2  |  1  |  1  |
+//|  3  |  1  |  1  |
+//|  4  | -1  |  1  |
+//|  5  | -1  | -1  |
+//|-----|-----|-----|
+
+void main() {
+    int idx = int(gl_VertexID/6);
+    int n = gl_VertexID % 6;
+    vec2 d = vec2(uLineWidth * (float(n > 0 && n < 4) * 2.0 - 1.0), 0.0);
+    float h = 10.0;
+
+    float x = dataPoint(idx).x;
+    float y = (float(n > 1 && n < 5) - 0.5) * h;
+    vec2 p = vec2(x, 0);
+
+    vec2 pos2d = projectionScale * (modelScale * (p + modelTranslate) + d);
+    gl_Position = vec4(pos2d.x, y, 0, 1);
+}`;
+    locations;
+    constructor(gl: WebGL2RenderingContext, debug: boolean) {
+        super(gl, SeparatorProgram.VS_SOURCE, LINE_FS_SOURCE, debug);
+        this.link()
+
+        this.locations = {
+            uDataPoints: this.getUniformLocation('uDataPoints'),
+            uLineWidth: this.getUniformLocation('uLineWidth'),
+            uColor: this.getUniformLocation('uColor'),
+        }
+
+        this.use();
+        gl.uniform1i(this.locations.uDataPoints, 0);
+        const projIdx = gl.getUniformBlockIndex(this.program, 'proj');
+        gl.uniformBlockBinding(this.program, projIdx, 0);
+    }
+}
+
 class SeriesSegmentVertexArray {
     dataBuffer;
 
@@ -216,6 +263,8 @@ class SeriesSegmentVertexArray {
             gl.drawArrays(gl.LINE_STRIP, first, count + 1);
         } else if (type === LineType.NativePoint) {
             gl.drawArrays(gl.POINTS, first, count + 1);
+        } else if (type === LineType.vLine) {
+            gl.drawArrays(gl.TRIANGLES, first * 6, count * 6);
         }
     }
 }
@@ -382,6 +431,7 @@ class SeriesVertexArray {
 export class LineChartRenderer {
     private lineProgram = new LineProgram(this.gl, this.options.debugWebGL);
     private nativeLineProgram = new NativeLineProgram(this.gl, this.options.debugWebGL);
+    private separatorProgram = new SeparatorProgram(this.gl, this.options.debugWebGL);
     private uniformBuffer;
     private arrays = new Map<TimeChartSeriesOptions, SeriesVertexArray>();
     private height = 0;
@@ -436,7 +486,23 @@ export class LineChartRenderer {
                 continue;
             }
 
-            const prog = ds.lineType === LineType.NativeLine || ds.lineType === LineType.NativePoint ? this.nativeLineProgram : this.lineProgram;
+            let prog = null;
+            switch(ds.lineType) {
+                case LineType.Step:
+                case LineType.Line:
+                    prog = this.lineProgram;
+                    break;
+                case LineType.NativeLine:
+                case LineType.NativePoint:
+                    prog = this.nativeLineProgram;
+                    break;
+                case LineType.vLine: 
+                    prog = this.separatorProgram;
+                    break;
+                
+                default: 
+                    prog = this.lineProgram;
+            }
             prog.use();
             const color = resolveColorRGBA(ds.color ?? this.options.color);
             gl.uniform4fv(prog.locations.uColor, color);
@@ -447,12 +513,15 @@ export class LineChartRenderer {
                 gl.uniform1f(prog.locations.uLineWidth, lineWidth / 2);
                 if (ds.lineType === LineType.Step)
                     gl.uniform1f(prog.locations.uStepLocation, ds.stepLocation);
-            } else {
+
+            } else if (prog instanceof SeparatorProgram) {
+                gl.uniform1f(prog.locations.uLineWidth, lineWidth / 2.0);
+            } else if (prog instanceof NativeLineProgram) {
                 if (ds.lineType === LineType.NativeLine)
                     gl.lineWidth(lineWidth * this.options.pixelRatio);  // Not working on most platforms
                 else if (ds.lineType === LineType.NativePoint)
                     gl.uniform1f(prog.locations.uPointSize, lineWidth * this.options.pixelRatio);
-            }
+            } 
 
             const renderDomain = {
                 min: this.model.xScale.invert(this.options.renderPaddingLeft - lineWidth / 2),

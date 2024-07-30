@@ -97,6 +97,7 @@ export enum LineType {
     Step,
     NativeLine,
     NativePoint,
+    vLine,
 };
 
 export interface TimeChartSeriesOptions {

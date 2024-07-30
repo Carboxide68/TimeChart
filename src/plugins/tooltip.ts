@@ -59,7 +59,7 @@ td {
     overflow: hidden;
     white-space: nowrap;
     min-width: 100px;
-    max-width: 100px;
+    max-width: var(--max-width, 100px);
     text-align: right;
 }
 .x-not-aligned .value {

@@ -1,5 +1,5 @@
 import { scaleLinear } from "d3-scale";
-import { ResolvedCoreOptions, TimeChartSeriesOptions } from '../options';
+import { ResolvedCoreOptions, TimeChartSeriesOptions, LineType } from '../options';
 import { EventDispatcher } from '../utils';
 
 export interface DataPoint {
@@ -97,6 +97,9 @@ export class RenderModel {
         }
         {
             const minMaxY = series.flatMap(s => {
+                if (s.lineType == LineType.vLine) {
+                    return []
+                }
                 return [
                     calcMinMaxY(s.data, 0, s.data.pushed_front),
                     calcMinMaxY(s.data, s.data.length - s.data.pushed_back, s.data.length),
