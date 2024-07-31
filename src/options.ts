@@ -1,3 +1,4 @@
+import TimeChart from './index';
 import { ColorCommonInstance, ColorSpaceObject, rgb } from 'd3-color';
 import { DataPointsBuffer } from './core/dataPointsBuffer';
 import { DataPoint } from './core/renderModel';
@@ -39,6 +40,8 @@ export interface TooltipOptions {
     xFormatter: (x: number) => string;
 }
 
+type Range = { min: number, max: number } | 'auto' | null;
+
 interface TimeChartRenderOptions {
     pixelRatio: number;
     lineWidth: number;
@@ -58,8 +61,8 @@ interface TimeChartRenderOptions {
     legend: boolean;
     tooltip: Partial<TooltipOptions>;
 
-    xRange: { min: number | Date, max: number | Date } | 'auto' | null;
-    yRange: { min: number, max: number } | 'auto' | null;
+    xRange: Range;
+    yRanges: Range[];
     realTime: boolean;
 
     /** Milliseconds since `new Date(0)`. Every x in data are relative to this.
@@ -85,7 +88,7 @@ export interface TimeChartOptionsBase extends Partial<TimeChartRenderOptions> {
 }
 
 export interface ResolvedCoreOptions extends TimeChartRenderOptions {
-    series: TimeChartSeriesOptions[];
+    series: TimeChartSeriesOptions[][];
 }
 
 export interface ResolvedOptions extends ResolvedCoreOptions {
@@ -108,6 +111,9 @@ export interface TimeChartSeriesOptions {
     visible: boolean;
     lineType: LineType;
     stepLocation: number;
+    minmax?: { min: number, max: number };
+    inLegend: boolean,
+    yAxisN: number,
 }
 
 export function resolveColorRGBA(color: ColorSpecifier): [number, number, number, number] {

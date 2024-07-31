@@ -1,5 +1,5 @@
-import { scaleLinear } from "d3-scale";
-import { ResolvedCoreOptions, TimeChartSeriesOptions, LineType } from '../options';
+import { ScaleLinear, scaleLinear } from "d3-scale";
+import { ResolvedCoreOptions, LineType } from '../options';
 import { EventDispatcher } from '../utils';
 
 export interface DataPoint {
@@ -29,24 +29,30 @@ function unionMinMax(...items: MinMax[]) {
 
 export class RenderModel {
     xScale = scaleLinear();
-    yScale = scaleLinear();
+    yScales: ScaleLinear<number, number, never>[];
     xRange: MinMax | null = null;
-    yRange: MinMax | null = null;
+    yRanges: MinMax[] | null = null;
 
     constructor(private options: ResolvedCoreOptions) {
+        this.yScales = [];
+        for (let tmp in options.series) {
+            this.yScales.push(scaleLinear());
+        }
         if (options.xRange !== 'auto' && options.xRange) {
             this.xScale.domain([options.xRange.min, options.xRange.max])
         }
-        if (options.yRange !== 'auto' && options.yRange) {
-            this.yScale.domain([options.yRange.min, options.yRange.max])
-        }
+        options.yRanges.forEach( (yRange, i) => {
+            if (yRange !== 'auto' && yRange) {
+                this.yScales[i].domain([yRange.min, yRange.max])
+            }
+        });
     }
 
     resized = new EventDispatcher<(width: number, height: number) => void>();
     resize(width: number, height: number) {
         const op = this.options;
         this.xScale.range([op.paddingLeft, width - op.paddingRight]);
-        this.yScale.range([height - op.paddingBottom, op.paddingTop]);
+        this.yScales.map((yScale) => (yScale.range([height - op.paddingBottom, op.paddingTop])));
 
         this.resized.dispatch(width, height)
         this.requestRedraw()
@@ -66,13 +72,15 @@ export class RenderModel {
     update() {
         this.updateModel();
         this.updated.dispatch();
-        for (const s of this.options.series) {
-            s.data._synced();
+        for (const srs of this.options.series) {
+            for (const s of srs) {
+                s.data._synced();
+            }
         }
     }
 
     updateModel() {
-        const series = this.options.series.filter(s => s.data.length > 0);
+        const series = this.options.series;
         if (series.length === 0) {
             return;
         }
@@ -80,8 +88,8 @@ export class RenderModel {
         const o = this.options;
 
         {
-            const maxDomain = Math.max(...series.map(s => s.data[s.data.length - 1].x));
-            const minDomain = Math.min(...series.map(s => s.data[0].x));
+            const maxDomain = Math.max(...series.flatMap(srs => srs.map(s => s.data[s.data.length - 1].x)));
+            const minDomain = Math.min(...series.flatMap(srs => srs.map(s => s.data[0].x)));
             this.xRange = { max: maxDomain, min: minDomain };
             if (this.options.realTime || o.xRange === 'auto') {
                 if (this.options.realTime) {
@@ -95,26 +103,31 @@ export class RenderModel {
                 this.xScale.domain([o.xRange.min, o.xRange.max])
             }
         }
-        {
-            const minMaxY = series.flatMap(s => {
-                if (s.lineType == LineType.vLine) {
-                    return []
+
+        this.yRanges = Array<MinMax>(o.yRanges.length);
+        o.yRanges.forEach( (yRange, i) => {
+            let mm: MinMax = {min: Infinity, max: -Infinity};
+            for (const s of o.series[i]) {
+                if (s.lineType === LineType.vLine) {
+                    s.minmax = { min: Infinity, max: -Infinity };
                 }
-                return [
-                    calcMinMaxY(s.data, 0, s.data.pushed_front),
-                    calcMinMaxY(s.data, s.data.length - s.data.pushed_back, s.data.length),
-                ];
-            })
-            if (this.yRange) {
-                minMaxY.push(this.yRange);
+                let nmm = s.minmax;
+                if (nmm === null || nmm === undefined) {
+                    s.minmax = calcMinMaxY(s.data, 0, s.data.length);
+                    nmm = s.minmax;
+                }
+                if (mm.min > nmm.min)
+                    mm.min = nmm.min;
+                if (mm.max < nmm.max)
+                    mm.max = nmm.max;
             }
-            this.yRange = unionMinMax(...minMaxY);
-            if (o.yRange === 'auto') {
-                this.yScale.domain([this.yRange.min, this.yRange.max]).nice();
-            } else if (o.yRange) {
-                this.yScale.domain([o.yRange.min, o.yRange.max])
+            this.yRanges![i] = mm;
+            if (yRange === 'auto') {
+                this.yScales[i].domain([mm.min, mm.max]);
+            } else if (yRange) {
+                this.yScales[i].domain([yRange.min, yRange.max])
             }
-        }
+        });
     }
 
     private redrawRequested = false;
@@ -135,7 +148,7 @@ export class RenderModel {
     pxPoint(dataPoint: DataPoint) {
         return {
             x: this.xScale(dataPoint.x)!,
-            y: this.yScale(dataPoint.y)!,
+            ys: this.yScales.map((yScale) => yScale(dataPoint.y)!),
         }
     }
 }

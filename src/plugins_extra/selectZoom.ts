@@ -139,14 +139,17 @@ export class SelectZoom {
         if (this.options.enableY) {
             const y1 = Math.max(this.start.p.y, p.y);
             const y2 = Math.min(this.start.p.y, p.y);
+            for (let i = 0; i < this.chart.model.yScales.length; i++) {
+            const yScale = this.chart.model.yScales[i];
             if (y1 - y2 > 0) {
                 const newDomain = [
-                    this.chart.model.yScale.invert(y1),
-                    this.chart.model.yScale.invert(y2),
+                    yScale.invert(y1),
+                    yScale.invert(y2),
                 ];
-                this.chart.model.yScale.domain(newDomain);
-                this.chart.options.yRange = null;
+                yScale.domain(newDomain);
+                this.chart.options.yRanges[i] = null;
                 changed = true;
+            }
             }
         }
         if (changed)

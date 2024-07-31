@@ -114,7 +114,7 @@ td {
             for (const [s, d] of chart.nearestPoint.dataPoints) {
                 const px = chart.model.pxPoint(d);
                 const dx = px.x - p.x;
-                const dy = px.y - p.y;
+                const dy = px.ys[s.yAxisN] - p.y;
                 const dis = Math.sqrt(dx * dx + dy * dy);
                 if (dis < minPointerDistance) {
                     minPointerDistance = dis;
@@ -125,17 +125,19 @@ td {
             const xFormatter = options.xFormatter;
             this.xItem.value.textContent = xFormatter(displayingX!);
 
-            for (const s of chart.options.series) {
-                if (!s.visible)
-                    continue;
+            for (const srs of chart.options.series) {
+                for (const s of srs) {
+                    if (!s.visible)
+                        continue;
 
-                let point = chart.nearestPoint.dataPoints.get(s);
-                let item = this.items.get(s);
-                if (item) {
-                    item.item.classList.toggle('out-of-range', !point);
-                    if (point) {
-                        item.value.textContent = point.y.toLocaleString();
-                        item.item.classList.toggle('x-not-aligned', point.x !== displayingX);
+                    let point = chart.nearestPoint.dataPoints.get(s);
+                    let item = this.items.get(s);
+                    if (item) {
+                        item.item.classList.toggle('out-of-range', !point);
+                        if (point) {
+                            item.value.textContent = point.y.toLocaleString();
+                            item.item.classList.toggle('x-not-aligned', point.x !== displayingX);
+                        }
                     }
                 }
             }
@@ -162,16 +164,18 @@ td {
     }
 
     update() {
-        for (const s of this.chartOptions.series) {
-            if (!this.items.has(s)) {
-                const itemElements = this.createItemElements(s.name);
-                this.itemContainer.appendChild(itemElements.item);
-                this.items.set(s, itemElements);
-            }
+        for (const srs of this.chartOptions.series) {
+            for (const s of srs) {
+                if (!this.items.has(s)) {
+                    const itemElements = this.createItemElements(s.name);
+                    this.itemContainer.appendChild(itemElements.item);
+                    this.items.set(s, itemElements);
+                }
 
-            const item = this.items.get(s)!;
-            item.example.style.backgroundColor = (s.color ?? this.chartOptions.color).toString();
-            item.item.style.display = s.visible ? "" : "none";
+                const item = this.items.get(s)!;
+                item.example.style.backgroundColor = (s.color ?? this.chartOptions.color).toString();
+                item.item.style.display = s.visible ? "" : "none";
+            }
         }
     }
 }
