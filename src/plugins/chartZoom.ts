@@ -32,12 +32,14 @@ export class TimeChartZoom {
         const z = new ChartZoom(chart.el, o);
         chart.model.updated.on(() => {
             this.applyAutoRange(o.x, chart.model.xRange);
-            this.applyAutoRange(o.y, chart.model.yRange);
+
+            for (let yRange of chart.model.yRanges ?? [null])
+                this.applyAutoRange(o.y, yRange);
             z.update();
         });
         z.onScaleUpdated(() => {
             chart.options.xRange = null;
-            chart.options.yRange = null;
+            for (let i = 0; i < chart.options.yRanges.length; i++) chart.options.yRanges[i] = null;
             chart.options.realTime = false;
             chart.update();
         });
@@ -69,7 +71,7 @@ export class TimeChartZoomPlugin implements TimeChartPlugin<TimeChartZoom> {
                                         case 'x':
                                             return chart.model.xScale;
                                         case 'y':
-                                            return chart.model.yScale;
+                                            return chart.model.yScales;
                                     }
                                 }
                                 return (target as any)[prop2] ?? (defaults as any)[prop2];

@@ -12,6 +12,17 @@ const BUFFER_TEXTURE_HEIGHT = 2048;
 const BUFFER_POINT_CAPACITY = BUFFER_TEXTURE_WIDTH * BUFFER_TEXTURE_HEIGHT;
 const BUFFER_INTERVAL_CAPACITY = BUFFER_POINT_CAPACITY - 2;
 
+class VertexArray {
+    vao;
+    constructor(private gl: WebGL2RenderingContext) {
+        this.vao = gl.createVertexArray()
+    }
+
+    bind() {
+        this.gl.bindVertexArray(this.vao);
+    }
+}
+
 class ShaderUniformData {
     data;
     ubo;
@@ -381,6 +392,7 @@ class SeriesVertexArray {
 
 export class LineChartRenderer {
     private lineProgram = new LineProgram(this.gl, this.options.debugWebGL);
+    private vertexArray = new VertexArray(this.gl);
     private nativeLineProgram = new NativeLineProgram(this.gl, this.options.debugWebGL);
     private uniformBuffer;
     private arrays = new Map<TimeChartSeriesOptions, SeriesVertexArray>();
@@ -402,13 +414,16 @@ export class LineChartRenderer {
     }
 
     syncBuffer() {
-        for (const s of this.options.series) {
-            let a = this.arrays.get(s);
-            if (!a) {
-                a = new SeriesVertexArray(this.gl, s);
-                this.arrays.set(s, a);
+        this.vertexArray.bind();
+        for (const srs of this.options.series) {
+            for (const s of srs) {
+                let a = this.arrays.get(s);
+                if (!a) {
+                    a = new SeriesVertexArray(this.gl, s);
+                    this.arrays.set(s, a);
+                }
+                a.syncBuffer();
             }
-            a.syncBuffer();
         }
     }
 
@@ -428,47 +443,49 @@ export class LineChartRenderer {
 
     drawFrame() {
         this.syncBuffer();
-        this.syncDomain();
-        this.uniformBuffer.upload();
-        const gl = this.gl;
-        for (const [ds, arr] of this.arrays) {
-            if (!ds.visible) {
-                continue;
+        for (let n = 0; n < this.options.series.length; n++) {
+            this.syncDomain(n);
+            this.uniformBuffer.upload();
+            const gl = this.gl;
+            for (const [ds, arr] of this.arrays) {
+                if (!ds.visible || ds.yAxisN != n) {
+                    continue;
+                }
+
+                const prog = ds.lineType === LineType.NativeLine || ds.lineType === LineType.NativePoint ? this.nativeLineProgram : this.lineProgram;
+                prog.use();
+                const color = resolveColorRGBA(ds.color ?? this.options.color);
+                gl.uniform4fv(prog.locations.uColor, color);
+
+                const lineWidth = ds.lineWidth ?? this.options.lineWidth;
+                if (prog instanceof LineProgram) {
+                    gl.uniform1i(prog.locations.uLineType, ds.lineType);
+                    gl.uniform1f(prog.locations.uLineWidth, lineWidth / 2);
+                    if (ds.lineType === LineType.Step)
+                        gl.uniform1f(prog.locations.uStepLocation, ds.stepLocation);
+                } else {
+                    if (ds.lineType === LineType.NativeLine)
+                        gl.lineWidth(lineWidth * this.options.pixelRatio);  // Not working on most platforms
+                    else if (ds.lineType === LineType.NativePoint)
+                        gl.uniform1f(prog.locations.uPointSize, lineWidth * this.options.pixelRatio);
+                }
+
+                const renderDomain = {
+                    min: this.model.xScale.invert(this.options.renderPaddingLeft - lineWidth / 2),
+                    max: this.model.xScale.invert(this.width - this.options.renderPaddingRight + lineWidth / 2),
+                };
+                arr.draw(renderDomain);
             }
-
-            const prog = ds.lineType === LineType.NativeLine || ds.lineType === LineType.NativePoint ? this.nativeLineProgram : this.lineProgram;
-            prog.use();
-            const color = resolveColorRGBA(ds.color ?? this.options.color);
-            gl.uniform4fv(prog.locations.uColor, color);
-
-            const lineWidth = ds.lineWidth ?? this.options.lineWidth;
-            if (prog instanceof LineProgram) {
-                gl.uniform1i(prog.locations.uLineType, ds.lineType);
-                gl.uniform1f(prog.locations.uLineWidth, lineWidth / 2);
-                if (ds.lineType === LineType.Step)
-                    gl.uniform1f(prog.locations.uStepLocation, ds.stepLocation);
-            } else {
-                if (ds.lineType === LineType.NativeLine)
-                    gl.lineWidth(lineWidth * this.options.pixelRatio);  // Not working on most platforms
-                else if (ds.lineType === LineType.NativePoint)
-                    gl.uniform1f(prog.locations.uPointSize, lineWidth * this.options.pixelRatio);
-            }
-
-            const renderDomain = {
-                min: this.model.xScale.invert(this.options.renderPaddingLeft - lineWidth / 2),
-                max: this.model.xScale.invert(this.width - this.options.renderPaddingRight + lineWidth / 2),
-            };
-            arr.draw(renderDomain);
-        }
-        if (this.options.debugWebGL) {
-            const err = gl.getError();
-            if (err != gl.NO_ERROR) {
-                throw new Error(`WebGL error ${err}`);
+            if (this.options.debugWebGL) {
+                const err = gl.getError();
+                if (err != gl.NO_ERROR) {
+                    throw new Error(`WebGL error ${err}`);
+                }
             }
         }
     }
 
-    syncDomain() {
+    syncDomain(series_n: number) {
         this.syncViewport();
         const m = this.model;
 
@@ -477,11 +494,12 @@ export class LineChartRenderer {
         // => s = (range[1] - range[0]) / (domain[1] - domain[0])
         //    t = (range[0] - W / 2 - padding) / s - domain[0]
 
+        const yScale = m.yScales[series_n];
         // Not using vec2 for precision
         const xDomain = m.xScale.domain();
         const xRange = m.xScale.range();
-        const yDomain = m.yScale.domain();
-        const yRange = m.yScale.range();
+        const yDomain = yScale.domain();
+        const yRange = yScale.range();
         const s = [
             (xRange[1] - xRange[0]) / (xDomain[1] - xDomain[0]),
             (yRange[0] - yRange[1]) / (yDomain[1] - yDomain[0]),

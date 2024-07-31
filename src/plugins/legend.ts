@@ -58,29 +58,32 @@ export class Legend {
         if (!this.options.legend)
             return;
 
-        for (const s of this.options.series) {
-            if (!this.items.has(s)) {
-                const item = document.createElement('div');
-                item.className = 'item';
-                const example = document.createElement('div');
-                example.className = 'example';
-                item.appendChild(example);
-                const name = document.createElement('label');
-                name.textContent = s.name;
-                item.appendChild(name);
-                this.itemContainer.appendChild(item);
+        for (const srs of this.options.series) {
+            for (const s of srs) {
+                if (!s.inLegend) continue;
+                if (!this.items.has(s)) {
+                    const item = document.createElement('div');
+                    item.className = 'item';
+                    const example = document.createElement('div');
+                    example.className = 'example';
+                    item.appendChild(example);
+                    const name = document.createElement('label');
+                    name.textContent = s.name;
+                    item.appendChild(name);
+                    this.itemContainer.appendChild(item);
 
-                item.addEventListener('click', (ev) => {
-                    s.visible = !s.visible;
-                    this.model.update();
-                })
+                    item.addEventListener('click', (ev) => {
+                        s.visible = !s.visible;
+                        this.model.update();
+                    })
 
-                this.items.set(s, {item, example});
+                    this.items.set(s, {item, example});
+                }
+                const item = this.items.get(s)!;
+                item.item.classList.toggle('visible', s.visible);
+                item.example.style.height = `${s.lineWidth ?? this.options.lineWidth}px`;
+                item.example.style.backgroundColor = (s.color ?? this.options.color).toString();
             }
-            const item = this.items.get(s)!;
-            item.item.classList.toggle('visible', s.visible);
-            item.example.style.height = `${s.lineWidth ?? this.options.lineWidth}px`;
-            item.example.style.backgroundColor = (s.color ?? this.options.color).toString();
         }
     }
 }

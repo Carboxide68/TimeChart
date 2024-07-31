@@ -5,7 +5,7 @@ import { TimeChartPlugin } from '../plugins';
 import { CanvasLayer } from './canvasLayer';
 import { ContentBoxDetector } from "./contentBoxDetector";
 import { NearestPointModel } from './nearestPoint';
-import { DataPoint, RenderModel } from './renderModel';
+import { RenderModel } from './renderModel';
 import { SVGLayer } from './svgLayer';
 import { DataPointsBuffer } from './dataPointsBuffer';
 
@@ -23,7 +23,7 @@ const defaultOptions = {
     renderPaddingLeft: 0,
     renderPaddingBottom: 0,
     xRange: 'auto',
-    yRange: 'auto',
+    yRanges: ['auto'],
     realTime: false,
     baseTime: 0,
     xScaleType: scaleTime,
@@ -38,23 +38,27 @@ const defaultSeriesOptions = {
     visible: true,
     lineType: LineType.Line,
     stepLocation: 1.,
+    inLegend: true,
+    minmax: null,
 } as const;
 
 type TPluginStates<TPlugins> = { [P in keyof TPlugins]: TPlugins[P] extends TimeChartPlugin<infer TState> ? TState : never };
 
-function completeSeriesOptions(s: Partial<TimeChartSeriesOptions>): TimeChartSeriesOptions {
+function completeSeriesOptions(s: Partial<TimeChartSeriesOptions>, series_index: number): TimeChartSeriesOptions {
     s.data = s.data ? DataPointsBuffer._from_array(s.data) : new DataPointsBuffer();
+    s.yAxisN = series_index;
     Object.setPrototypeOf(s, defaultSeriesOptions);
     return s as TimeChartSeriesOptions;
 }
 
 function completeOptions(el: Element, options?: TimeChartOptionsBase): ResolvedCoreOptions {
     const dynamicDefaults = {
-        series: [] as TimeChartSeriesOptions[],
+        series: [[]] as TimeChartSeriesOptions[][],
         color: getComputedStyle(el).getPropertyValue('color'),
     }
     const o = Object.assign({}, dynamicDefaults, options);
-    o.series = o.series.map(s => completeSeriesOptions(s));
+    o.yRanges = o.series.map( (_, i) => (o.yRanges && o.yRanges[i]) ?? 'auto');
+    o.series = o.series.map((srs, i) => srs.map((s) => completeSeriesOptions(s, i)));
     Object.setPrototypeOf(o, defaultOptions);
     return o as ResolvedCoreOptions;
 }
@@ -88,7 +92,7 @@ export default class TimeChart<TPlugins extends TimeChartPlugins=NoPlugin> {
         this.svgLayer = new SVGLayer(el, this.model);
         this.contentBoxDetector = new ContentBoxDetector(el, this.model, coreOptions);
         this.nearestPoint = new NearestPointModel(this.canvasLayer, this.model, coreOptions, this.contentBoxDetector);
-        this._options = coreOptions
+        this._options = coreOptions;
 
         this.plugins = Object.fromEntries(
             Object.entries(options?.plugins ?? {}).map(([name, p]) => [name, p.apply(this)])
@@ -96,7 +100,7 @@ export default class TimeChart<TPlugins extends TimeChartPlugins=NoPlugin> {
 
         this.onResize();
 
-        const resizeHandler = () => this.onResize()
+        const resizeHandler = () => this.onResize();
         window.addEventListener('resize', resizeHandler);
         this.model.disposing.on(() => {
             window.removeEventListener('resize', resizeHandler);
@@ -114,10 +118,12 @@ export default class TimeChart<TPlugins extends TimeChartPlugins=NoPlugin> {
         }
 
         // fix dynamic added series
-        for (let i = 0; i < this.options.series.length; i++) {
-            const s = this.options.series[i];
-            if (!defaultSeriesOptions.isPrototypeOf(s)) {
-                this.options.series[i] = completeSeriesOptions(s);
+        for (let j = 0; j < this.options.series.length; j++) {
+            for (let i = 0; i < this.options.series[j].length; i++) {
+                const s = this.options.series[j][i];
+                if (!defaultSeriesOptions.isPrototypeOf(s)) {
+                    this.options.series[j][i] = completeSeriesOptions(s, j);
+                }
             }
         }
 
