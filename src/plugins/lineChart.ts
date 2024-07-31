@@ -12,17 +12,6 @@ const BUFFER_TEXTURE_HEIGHT = 2048;
 const BUFFER_POINT_CAPACITY = BUFFER_TEXTURE_WIDTH * BUFFER_TEXTURE_HEIGHT;
 const BUFFER_INTERVAL_CAPACITY = BUFFER_POINT_CAPACITY - 2;
 
-class VertexArray {
-    vao;
-    constructor(private gl: WebGL2RenderingContext) {
-        this.vao = gl.createVertexArray()
-    }
-
-    bind() {
-        this.gl.bindVertexArray(this.vao);
-    }
-}
-
 class ShaderUniformData {
     data;
     ubo;
@@ -392,7 +381,6 @@ class SeriesVertexArray {
 
 export class LineChartRenderer {
     private lineProgram = new LineProgram(this.gl, this.options.debugWebGL);
-    private vertexArray = new VertexArray(this.gl);
     private nativeLineProgram = new NativeLineProgram(this.gl, this.options.debugWebGL);
     private uniformBuffer;
     private arrays = new Map<TimeChartSeriesOptions, SeriesVertexArray>();
@@ -414,7 +402,6 @@ export class LineChartRenderer {
     }
 
     syncBuffer() {
-        this.vertexArray.bind();
         for (const srs of this.options.series) {
             for (const s of srs) {
                 let a = this.arrays.get(s);
