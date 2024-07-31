@@ -9,7 +9,7 @@ function main() {
         // debugWebGL: true,
         // forceWebGL1: true,
         baseTime,
-        series: [
+        series: [[
             {
                 name: 'Sin',
                 data: dataSin,
@@ -20,7 +20,7 @@ function main() {
                 lineWidth: 2,
                 color: 'red',
             },
-        ],
+        ]],
         xRange: { min: 0, max: 20 * 1000 },
         realTime: true,
         zoom: {

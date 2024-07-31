@@ -33,13 +33,17 @@ export class TimeChartZoom {
         chart.model.updated.on(() => {
             this.applyAutoRange(o.x, chart.model.xRange);
 
-            for (let yRange of chart.model.yRanges ?? [null])
-                this.applyAutoRange(o.y, yRange);
+            let yRangeMM: MinMax | null = null;
+            for (let yRange of chart.model.yRanges ?? []) {
+                yRangeMM = yRangeMM ? { min: Math.min(yRange.min, yRangeMM.min), max: Math.max(yRange.max, yRangeMM.max) } : yRange;
+            }
+
+            this.applyAutoRange(o.y, yRangeMM);
             z.update();
         });
         z.onScaleUpdated(() => {
             chart.options.xRange = null;
-            for (let i = 0; i < chart.options.yRanges.length; i++) chart.options.yRanges[i] = null;
+            chart.options.yRanges.forEach( (yRange) => yRange = null);
             chart.options.realTime = false;
             chart.update();
         });
