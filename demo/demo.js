@@ -25,11 +25,9 @@ function main() {
         zoom: {
             x: {
                 autoRange: true,
-                minDomainExtent: 50,
             },
             y: {
                 autoRange: true,
-                minDomainExtent: 1,
             }
         },
         tooltip: {
