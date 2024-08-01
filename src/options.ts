@@ -101,6 +101,7 @@ export enum LineType {
     NativeLine,
     NativePoint,
     vLine,
+    State,
 };
 
 export interface TimeChartSeriesOptions {
@@ -109,10 +110,12 @@ export interface TimeChartSeriesOptions {
     name: string;
     color?: ColorSpecifier;
     visible: boolean;
+    opacity?: number;
     lineType: LineType;
     stepLocation: number;
     minmax?: { min: number, max: number };
     inLegend: boolean,
+    labels: Map<number, string>,
     yAxisN: number,
 }
 

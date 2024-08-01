@@ -1,5 +1,6 @@
-import { TimeChartSeriesOptions, TooltipOptions } from "../options";
+import { TimeChartSeriesOptions, TooltipOptions, LineType } from "../options";
 import { TimeChartPlugin } from ".";
+import { indexOfSorted } from "../utils";
 import core from "../core";
 
 type ItemElements = { item: HTMLElement; example: HTMLElement; name: HTMLElement, value: HTMLElement }
@@ -132,12 +133,21 @@ td {
 
                     let point = chart.nearestPoint.dataPoints.get(s);
                     let item = this.items.get(s);
-                    if (item) {
-                        item.item.classList.toggle('out-of-range', !point);
+                    if (!item) continue;
+                    if (s.lineType == LineType.State) {
+                        if (!s.labels) continue;
                         if (point) {
-                            item.value.textContent = point.y.toLocaleString();
-                            item.item.classList.toggle('x-not-aligned', point.x !== displayingX);
-                        }
+                            item.value.textContent = s.labels.get(point.y) ?? "";
+                            s.stepLocation = indexOfSorted(s.data, point.x, (p) => p.x);
+                            //s.stepLocation = s.data.indexOf(point);
+                        } else
+                            item.value.textContent = "";
+                        continue;
+                    }
+                    item.item.classList.toggle('out-of-range', !point);
+                    if (point) {
+                        item.value.textContent = point.y.toLocaleString();
+                        item.item.classList.toggle('x-not-aligned', point.x !== displayingX);
                     }
                 }
             }

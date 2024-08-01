@@ -1,6 +1,6 @@
 import { NearestPointModel } from "../core/nearestPoint";
 import { SVGLayer } from "../core/svgLayer";
-import { ResolvedCoreOptions, TimeChartSeriesOptions } from "../options";
+import { ResolvedCoreOptions, TimeChartSeriesOptions, LineType } from "../options";
 import { TimeChartPlugin } from ".";
 import { RenderModel } from "../core/renderModel";
 
@@ -44,6 +44,8 @@ export class NearestPoint {
         for (let i = 0; i < this.options.series.length; i++) {
             const srs = this.options.series[i];
             for (const s of srs) {
+                if (s.lineType == LineType.State || s.lineType == LineType.vLine)
+                    continue
                 if (!this.intersectPoints.has(s)) {
                     const intersect = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                     intersect.transform.baseVal.initialize(initTrans);

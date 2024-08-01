@@ -5,6 +5,8 @@ import { vec2 } from 'gl-matrix';
 import { TimeChartPlugin } from '.';
 import { LinkedWebGLProgram, throwIfFalsy } from './webGLUtils';
 import { DataPointsBuffer } from "../core/dataPointsBuffer";
+import { NearestPoint } from "./nearestPoint";
+import core from "../core";
 
 
 const BUFFER_TEXTURE_WIDTH = 256;
@@ -205,6 +207,61 @@ void main() {
     }
 }
 
+class StateProgram extends LinkedWebGLProgram {
+    static VS_SOURCE = `${VS_HEADER}
+uniform float uLineWidth;
+uniform int uHoverPoint;
+flat out vec3 color;
+flat out int hoverPoint;
+
+void main() {
+    int idx = int(gl_VertexID/2);
+    int n = gl_VertexID % 2;
+    float h = 10.0;
+
+    float y = (float(n) - 0.5) * h;
+    vec2 p = vec2(dataPoint(idx).x, 0);
+    const uint mask = 255u;
+    hoverPoint = int(uHoverPoint == (idx - 1));
+    uint c = uint(dataPoint(idx - 1).y);
+    color.r = float(c & mask)/255.0;
+    c = c >> 8;
+    color.g = float(c & mask)/255.0;
+    c = c >> 8;
+    color.b = float(c & mask)/255.0;
+
+    vec2 pos2d = projectionScale * modelScale * (p + modelTranslate);
+    gl_Position = vec4(pos2d.x, y, 0.9, 1);
+}`;
+
+    static FS_SOURCE = `#version 300 es
+precision lowp float;
+flat in vec3 color;
+flat in int hoverPoint;
+out vec4 outColor;
+uniform float uOpacity;
+void main() {
+    outColor = vec4(color, (hoverPoint != 0) ? uOpacity * 1.5 : uOpacity);
+}`
+
+    locations;
+    constructor(gl: WebGL2RenderingContext, debug: boolean) {
+        super(gl, StateProgram.VS_SOURCE, StateProgram.FS_SOURCE, debug);
+        this.link()
+
+        this.locations = {
+            uDataPoints: this.getUniformLocation('uDataPoints'),
+            uOpacity: this.getUniformLocation('uOpacity'),
+            uHoverPoint: this.getUniformLocation('uHoverPoint'),
+        }
+
+        this.use();
+        gl.uniform1i(this.locations.uDataPoints, 0);
+        const projIdx = gl.getUniformBlockIndex(this.program, 'proj');
+        gl.uniformBlockBinding(this.program, projIdx, 0);
+    }
+}
+
 class SeriesSegmentVertexArray {
     dataBuffer;
 
@@ -277,6 +334,8 @@ class SeriesSegmentVertexArray {
             gl.drawArrays(gl.POINTS, first, count + 1);
         } else if (type === LineType.vLine) {
             gl.drawArrays(gl.TRIANGLES, first * 6, count * 6);
+        } else if (type === LineType.State) {
+            gl.drawArrays(gl.TRIANGLE_STRIP, first * 2, count * 2 + 4);
         }
     }
 }
@@ -348,7 +407,7 @@ class SeriesVertexArray {
         while (true) {
             const activeArray = this.segments[0];
             const n = Math.min(this.validStart, numDPtoAdd);
-            activeArray.syncPoints(numDPtoAdd - n, n, this.validStart - n);
+           activeArray.syncPoints(numDPtoAdd - n, n, this.validStart - n);
             numDPtoAdd -= this.validStart - (BUFFER_POINT_CAPACITY - BUFFER_INTERVAL_CAPACITY);
             this.validStart -= n;
             if (this.validStart > 0)
@@ -445,6 +504,7 @@ export class LineChartRenderer {
     private vertexArray = new VertexArray(this.gl);
     private nativeLineProgram = new NativeLineProgram(this.gl, this.options.debugWebGL);
     private separatorProgram = new SeparatorProgram(this.gl, this.options.debugWebGL);
+    private stateProgram = new StateProgram(this.gl, this.options.debugWebGL);
     private uniformBuffer;
     private arrays = new Map<TimeChartSeriesOptions, SeriesVertexArray>();
     private height = 0;
@@ -493,11 +553,13 @@ export class LineChartRenderer {
     }
 
     drawFrame() {
+        const gl = this.gl;
         this.syncBuffer();
+        gl.enable(gl.DEPTH_TEST);
+        gl.enable(gl.BLEND);
         for (let n = 0; n < this.options.series.length; n++) {
             this.syncDomain(n);
             this.uniformBuffer.upload();
-            const gl = this.gl;
             for (const [ds, arr] of this.arrays) {
                 if (!ds.visible || ds.yAxisN != n) {
                     continue;
@@ -516,30 +578,38 @@ export class LineChartRenderer {
                     case LineType.vLine: 
                         prog = this.separatorProgram;
                         break;
-                
+                    case LineType.State:
+                        prog = this.stateProgram;
+                        break;
                     default: 
                         prog = this.lineProgram;
+                        break;
                 }
                 prog.use();
                 gl.disableVertexAttribArray(0);
                 const color = resolveColorRGBA(ds.color ?? this.options.color);
-                gl.uniform4fv(prog.locations.uColor, color);
 
                 const lineWidth = ds.lineWidth ?? this.options.lineWidth;
                 if (prog instanceof LineProgram) {
+                    gl.uniform4fv(prog.locations.uColor, color);
                     gl.uniform1i(prog.locations.uLineType, ds.lineType);
                     gl.uniform1f(prog.locations.uLineWidth, lineWidth / 2);
                     if (ds.lineType === LineType.Step)
                         gl.uniform1f(prog.locations.uStepLocation, ds.stepLocation);
 
                 } else if (prog instanceof SeparatorProgram) {
+                    gl.uniform4fv(prog.locations.uColor, color);
                     gl.uniform1f(prog.locations.uLineWidth, lineWidth / 2.0);
                 } else if (prog instanceof NativeLineProgram) {
+                    gl.uniform4fv(prog.locations.uColor, color);
                     if (ds.lineType === LineType.NativeLine)
                         gl.lineWidth(lineWidth * this.options.pixelRatio);  // Not working on most platforms
                     else if (ds.lineType === LineType.NativePoint)
                         gl.uniform1f(prog.locations.uPointSize, lineWidth * this.options.pixelRatio);
-                } 
+                } else if (prog instanceof StateProgram) {
+                    gl.uniform1f(prog.locations.uOpacity, ds.opacity ?? 0.5);
+                    gl.uniform1i(prog.locations.uHoverPoint, ds.stepLocation + 1);
+                }
 
                 const renderDomain = {
                     min: this.model.xScale.invert(this.options.renderPaddingLeft - lineWidth / 2),

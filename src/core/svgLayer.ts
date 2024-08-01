@@ -22,7 +22,7 @@ export function makeContentBox(model: RenderModel, options: ResolvedCoreOptions)
     const contentSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     contentSvg.classList.add('content-box')
     contentSvg.x.baseVal.value = options.paddingLeft
-    contentSvg.y.baseVal.value = options.paddingRight
+    contentSvg.y.baseVal.value = options.paddingTop
 
     model.resized.on((width, height) => {
         contentSvg.width.baseVal.value = width - options.paddingRight - options.paddingLeft;

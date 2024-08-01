@@ -1,3 +1,4 @@
+import { rgb } from 'd3-color';
 /** lower bound */
 export function domainSearch<T>(data: ArrayLike<T>, start: number, end: number, value: number, key: (v: T) => number) {
     if (start >= end) {
@@ -45,3 +46,35 @@ export class EventDispatcher<TCb extends (...args: Array<any>) => void = (() => 
         }
     }
 }
+
+export function indexOfSorted<T, K>(data: ArrayLike<T>, val: K, key: (v: T) => K) {
+    let end = data.length - 1;
+    if (key(data[end]) === val) return end;
+    let start: number = Math.floor(end/2);
+    let i0 = data[start];
+    if (key(i0) === val) return start;
+    if (val < key(i0)) {
+        end = start;
+        start = 0;
+    }
+    while (start != end) {
+        let caret = Math.floor((start + end)/2);
+        let v = key(data[caret]);
+        if (v === val) return caret;
+        else if (val < v) {
+            end = caret;
+        } else {
+            start = caret;
+        }
+    }
+    return -1;
+}
+
+export function quantizeColor(col: any) {
+    let c = rgb(col);
+    let q = Math.floor(c.r);
+    q += Math.floor(c.g) * 256;
+    q += Math.floor(c.b) * 256 * 256;
+    return q;
+}
+

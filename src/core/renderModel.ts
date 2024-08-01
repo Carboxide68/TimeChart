@@ -108,7 +108,7 @@ export class RenderModel {
         o.yRanges.forEach( (yRange, i) => {
             let mm: MinMax = {min: Infinity, max: -Infinity};
             for (const s of o.series[i]) {
-                if (s.lineType === LineType.vLine) {
+                if (s.lineType === LineType.vLine || s.lineType == LineType.State) {
                     s.minmax = { min: Infinity, max: -Infinity };
                 }
                 let nmm = s.minmax;

@@ -1,4 +1,4 @@
-import { ResolvedCoreOptions, TimeChartSeriesOptions } from '../options';
+import { ResolvedCoreOptions, TimeChartSeriesOptions, LineType } from '../options';
 import { domainSearch, EventDispatcher } from '../utils';
 import { CanvasLayer } from './canvasLayer';
 import { ContentBoxDetector } from "./contentBoxDetector";
@@ -45,6 +45,10 @@ export class NearestPointModel {
                         continue;
                     }
                     const pos = domainSearch(s.data, 0, s.data.length, domain, d => d.x);
+                    if (s.lineType == LineType.State && pos > 0) {
+                        this.dataPoints.set(s, s.data[pos - 1]);
+                        continue;
+                    }
                     const near: DataPoint[] = [];
                     if (pos > 0) {
                         near.push(s.data[pos - 1]);

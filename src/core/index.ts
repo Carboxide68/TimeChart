@@ -1,4 +1,5 @@
 import { LineType, NoPlugin, ResolvedCoreOptions, TimeChartOptions, TimeChartOptionsBase, TimeChartPlugins, TimeChartSeriesOptions } from '../options';
+import { quantizeColor } from '../utils';
 import { rgb } from 'd3-color';
 import { scaleTime } from 'd3-scale';
 import { TimeChartPlugin } from '../plugins';
@@ -15,13 +16,13 @@ const defaultOptions = {
     lineWidth: 1,
     backgroundColor: rgb(0, 0, 0, 0),
     paddingTop: 10,
-    paddingRight: 10,
+    paddingRight: 45,
     paddingLeft: 45,
     paddingBottom: 20,
-    renderPaddingTop: 0,
-    renderPaddingRight: 0,
-    renderPaddingLeft: 0,
-    renderPaddingBottom: 0,
+    renderPaddingTop: 10,
+    renderPaddingRight: 45,
+    renderPaddingLeft: 45,
+    renderPaddingBottom: 20,
     xRange: 'auto',
     yRanges: ['auto'],
     realTime: false,
@@ -37,6 +38,7 @@ const defaultSeriesOptions = {
     color: null,
     visible: true,
     lineType: LineType.Line,
+    opacity: null,
     stepLocation: 1.,
     inLegend: true,
     minmax: null,
@@ -45,7 +47,15 @@ const defaultSeriesOptions = {
 type TPluginStates<TPlugins> = { [P in keyof TPlugins]: TPlugins[P] extends TimeChartPlugin<infer TState> ? TState : never };
 
 function completeSeriesOptions(s: Partial<TimeChartSeriesOptions>, series_index: number): TimeChartSeriesOptions {
-    s.data = s.data ? DataPointsBuffer._from_array(s.data) : new DataPointsBuffer();
+    if (s.lineType == LineType.State) {
+        s.data = s.data ? DataPointsBuffer._from_array(s.data.map( d => { return {x: d.x, y: quantizeColor(d.y) } })) : new DataPointsBuffer();
+        if (s.labels) {
+            let labelsProto = new Map<any, string>(Object.entries(s.labels as Object));
+            s.labels = new Map<number, string>([]);
+            labelsProto.forEach( (v, k) => s.labels!.set(quantizeColor(k), v));
+        }
+    } else
+        s.data = s.data ? DataPointsBuffer._from_array(s.data) : new DataPointsBuffer();
     s.yAxisN = series_index;
     Object.setPrototypeOf(s, defaultSeriesOptions);
     return s as TimeChartSeriesOptions;
