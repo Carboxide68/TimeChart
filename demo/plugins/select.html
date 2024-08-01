@@ -36,7 +36,7 @@
             data.push({x, y: Math.random()});
         }
         const chart = new TimeChart.core(el, {
-            series: [{ data, name: 'Random' }],
+            series: [[{ data, name: 'Random' }]],
             xScaleType: d3.scaleLinear,
             plugins: {
                 lineChart: TimeChart.plugins.lineChart,

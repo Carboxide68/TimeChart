@@ -41,7 +41,7 @@
             {x: 45*1000, name: 'event B'},
         ];
         const chart = new TimeChart(el, {
-            series: [{ data, name: 'Random' }],
+            series: [[{ data, name: 'Random' }]],
             zoom: {x: {autoRange: true}},
             plugins: {
                 events: new TimeChart.plugins_extra.EventsPlugin(events),

@@ -1,5 +1,4 @@
 import { axisBottom, axisLeft, axisRight } from 'd3-axis';
-import { format } from 'd3-format';
 import { select } from "d3-selection";
 import { TimeChartPlugin } from ".";
 
@@ -29,7 +28,6 @@ export const d3Axis: TimeChartPlugin = {
                 const yScale = chart.model.yScales[i];
                 const yg = ygs[i];
                 yAxis.scale(yScale);
-                yAxis.tickFormat(format(".3s"))
                 yg.call(yAxis);
             }
         }

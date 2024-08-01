@@ -32,10 +32,10 @@
             d2.push({x, y: Math.random()});
         }
         const chart = new TimeChart(el, {
-            series: [
+            series: {[
                 { data: d1, name: 'd1' },
                 { data: d2, name: 'd2', color: 'red' },
-            ],
+            ]],
             tooltip: {enabled: true},
         });
     </script>

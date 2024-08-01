@@ -7,7 +7,6 @@ function main() {
     const baseTime = Date.now() - performance.now()
     const chart = new TimeChart(el, {
         // debugWebGL: true,
-        // forceWebGL1: true,
         baseTime,
         series: [[
             {
