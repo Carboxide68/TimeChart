@@ -26,9 +26,9 @@ function main() {
             x: {
                 autoRange: true,
             },
-            y: {
+            ys: [{
                 autoRange: true,
-            }
+            }],
         },
         tooltip: {
             enabled: true,
