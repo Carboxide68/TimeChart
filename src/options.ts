@@ -17,12 +17,12 @@ export interface ResolvedAxisZoomOptions extends zoomOptions.ResolvedAxisOptions
 
 export interface ZoomOptions {
     x?: AxisZoomOptions;
-    y?: AxisZoomOptions;
+    ys?: AxisZoomOptions[];
 }
 
 export interface ResolvedZoomOptions {
     x?: ResolvedAxisZoomOptions;
-    y?: ResolvedAxisZoomOptions;
+    ys: ResolvedAxisZoomOptions[];
 }
 
 interface ScaleBase {

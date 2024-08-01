@@ -33,12 +33,10 @@ export class TimeChartZoom {
         chart.model.updated.on(() => {
             this.applyAutoRange(o.x, chart.model.xRange);
 
-            let yRangeMM: MinMax | null = null;
-            for (let yRange of chart.model.yRanges ?? []) {
-                yRangeMM = yRangeMM ? { min: Math.min(yRange.min, yRangeMM.min), max: Math.max(yRange.max, yRangeMM.max) } : yRange;
-            }
+            (chart.model.yRanges ?? []).forEach((yRange, i) => {
+                o.ys[i] && this.applyAutoRange(o.ys[i], yRange);
+            });
 
-            this.applyAutoRange(o.y, yRangeMM);
             z.update();
         });
         z.onScaleUpdated(() => {
@@ -64,7 +62,7 @@ export class TimeChartZoomPlugin implements TimeChartPlugin<TimeChartZoom> {
             get: (target, prop) => {
                 switch (prop) {
                     case 'x':
-                    case 'y':
+                    case 'ys':
                         const op = target[prop];
                         if (!op)
                             return op;
@@ -74,7 +72,7 @@ export class TimeChartZoomPlugin implements TimeChartPlugin<TimeChartZoom> {
                                     switch (prop) {
                                         case 'x':
                                             return chart.model.xScale;
-                                        case 'y':
+                                        case 'ys':
                                             return chart.model.yScales;
                                     }
                                 }
