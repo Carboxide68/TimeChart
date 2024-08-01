@@ -43,7 +43,7 @@ export class TimeChartZoom {
         });
         z.onScaleUpdated(() => {
             chart.options.xRange = null;
-            chart.options.yRanges.forEach( (yRange) => yRange = null);
+            chart.options.yRanges.forEach(yRange => yRange = null);
             chart.options.realTime = false;
             chart.update();
         });
