@@ -62,7 +62,6 @@ export class ChartZoom {
 
     /** Call this when scale updated outside */
     update() {
-        this.scaleUpdated.dispatch()
         this.touch.update();
     }
 }

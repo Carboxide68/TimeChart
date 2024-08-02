@@ -1,4 +1,3 @@
-import TimeChart from './index';
 import { ColorCommonInstance, ColorSpaceObject, rgb } from 'd3-color';
 import { DataPointsBuffer } from './core/dataPointsBuffer';
 import { DataPoint } from './core/renderModel';
@@ -22,7 +21,7 @@ export interface ZoomOptions {
 
 export interface ResolvedZoomOptions {
     x?: ResolvedAxisZoomOptions;
-    ys: ResolvedAxisZoomOptions[];
+    ys?: ResolvedAxisZoomOptions[];
 }
 
 interface ScaleBase {

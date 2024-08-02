@@ -1,7 +1,7 @@
 import { ChartZoom } from "../chartZoom";
 import core from "../core";
 import { MinMax } from "../core/renderModel";
-import { ResolvedZoomOptions, TimeChartPlugins, ZoomOptions } from "../options";
+import { AxisZoomOptions, ResolvedZoomOptions, TimeChartPlugins, ZoomOptions } from "../options";
 import { TimeChartPlugin } from ".";
 import { ScaleLinear } from "d3-scale";
 
@@ -34,7 +34,8 @@ export class TimeChartZoom {
             this.applyAutoRange(o.x, chart.model.xRange);
 
             (chart.model.yRanges ?? []).forEach((yRange, i) => {
-                o.ys[i] && this.applyAutoRange(o.ys[i], yRange);
+                if (!o.ys) return;
+                this.applyAutoRange(o.ys[i], yRange);
             });
 
             z.update();
@@ -66,19 +67,29 @@ export class TimeChartZoomPlugin implements TimeChartPlugin<TimeChartZoom> {
                         const op = target[prop];
                         if (!op)
                             return op;
-                        return new Proxy(op, {
-                            get: (target, prop2) => {
-                                if (prop2 === 'scale') {
-                                    switch (prop) {
-                                        case 'x':
+                        switch (prop) {
+                            case 'x': {
+                                return new Proxy (op, {
+                                    get: (target, prop2) => {
+                                        if (prop2 === 'scale')
                                             return chart.model.xScale;
-                                        case 'ys':
-                                            return chart.model.yScales;
+                                        return (target as any)[prop2] ?? (defaults as any)[prop2];
                                     }
-                                }
-                                return (target as any)[prop2] ?? (defaults as any)[prop2];
+                                });
+                                break;
                             }
-                        })
+                            case 'ys': {
+                                return new Proxy (op, {
+                                    get: (target, index) => new Proxy((target as AxisZoomOptions[])[+(index as string)], {
+                                        get: (target, prop2) => {
+                                            if (prop2 === 'scale')
+                                                return chart.model.yScales[+(index as string)];
+                                            return (target as any)[prop2] ?? (defaults as any)[prop2];
+                                        }
+                                    })
+                                });
+                            }
+                        };
                     case 'eventElement':
                         return chart.contentBoxDetector.node;
                     default:

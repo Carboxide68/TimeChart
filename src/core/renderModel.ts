@@ -31,7 +31,7 @@ export class RenderModel {
     xScale = scaleLinear();
     yScales: ScaleLinear<number, number, never>[];
     xRange: MinMax | null = null;
-    yRanges: MinMax[] | null = null;
+    yRanges: (MinMax | null)[];
 
     constructor(private options: ResolvedCoreOptions) {
         this.yScales = [];
@@ -41,8 +41,9 @@ export class RenderModel {
         if (options.xRange !== 'auto' && options.xRange) {
             this.xScale.domain([options.xRange.min, options.xRange.max])
         }
+        this.yRanges = options.series.map( _ => null);
         options.yRanges.forEach( (yRange, i) => {
-            if (yRange !== 'auto' && yRange) {
+            if (yRange && yRange !== 'auto') {
                 this.yScales[i].domain([yRange.min, yRange.max])
             }
         });
@@ -51,8 +52,8 @@ export class RenderModel {
     resized = new EventDispatcher<(width: number, height: number) => void>();
     resize(width: number, height: number) {
         const op = this.options;
-        this.xScale.range([op.paddingLeft, width - op.paddingRight]);
-        this.yScales.map((yScale) => (yScale.range([height - op.paddingBottom, op.paddingTop])));
+        this.xScale.range([op.renderPaddingLeft, width - op.renderPaddingRight]);
+        this.yScales.map((yScale) => (yScale.range([height - op.renderPaddingBottom, op.renderPaddingTop])));
 
         this.resized.dispatch(width, height)
         this.requestRedraw()
@@ -80,7 +81,13 @@ export class RenderModel {
     }
 
     updateModel() {
-        const series = this.options.series.map( srs => srs.filter( s => s.data.length > 0 ) );
+        // This line right below was maddening to debug.
+        // Don't set the outer function as a debug, because then
+        // the condition below doesn't work. That means that you can
+        // corrupt this.xScale.domain when realTime is set, and end
+        // up having errors in searchDomain. These errors are not easily
+        // traced back to here.
+        const series = this.options.series.filter( srs => srs.filter( s => s.data.length > 0 ).length > 0 );
         if (series.length === 0) {
             return;
         }
@@ -103,21 +110,20 @@ export class RenderModel {
                 this.xScale.domain([o.xRange.min, o.xRange.max])
             }
         }
-        this.yRanges = Array<MinMax>(o.yRanges.length);
+        if (!this.yRanges) this.yRanges = new Array(o.yRanges.length);
         o.yRanges.forEach( (yRange, i) => {
-            let mm: MinMax = {min: Infinity, max: -Infinity};
-            for (const s of o.series[i]) {
-                let nmm = s.minmax;
-                if (nmm === null || nmm === undefined) {
-                    s.minmax = calcMinMaxY(s.data, 0, s.data.length);
-                    nmm = s.minmax;
-                }
-                mm.min = Math.min(mm.min, nmm.min)
-                mm.max = Math.max(mm.max, nmm.max);
-            }
-            this.yRanges![i] = mm;
+            const minMaxY = series[i].flatMap(s => {
+                return [
+                    calcMinMaxY(s.data, 0, s.data.pushed_front),
+                    calcMinMaxY(s.data, s.data.length - s.data.pushed_back, s.data.length),
+                ];
+            });
+            this.yRanges[i] && minMaxY.push(this.yRanges[i]!);
+
+            this.yRanges[i] = unionMinMax(...minMaxY) ?? null;
+            if (!this.yRanges[i]) return;
             if (yRange === 'auto') {
-                this.yScales[i].domain([mm.min, mm.max]);
+                this.yScales[i].domain([this.yRanges[i]!.min, this.yRanges[i]!.max]).nice();
             } else if (yRange) {
                 this.yScales[i].domain([yRange.min, yRange.max])
             }

@@ -458,8 +458,8 @@ export class LineChartRenderer {
                 }
 
                 const renderDomain = {
-                    min: this.model.xScale.invert(this.options.renderPaddingLeft - lineWidth / 2),
-                    max: this.model.xScale.invert(this.width - this.options.renderPaddingRight + lineWidth / 2),
+                    min: this.model.xScale.invert(this.options.renderPaddingLeft),
+                    max: this.model.xScale.invert(this.width - this.options.renderPaddingRight),
                 };
                 arr.draw(renderDomain);
             }
