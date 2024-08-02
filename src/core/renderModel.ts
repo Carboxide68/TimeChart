@@ -80,7 +80,7 @@ export class RenderModel {
     }
 
     updateModel() {
-        const series = this.options.series;
+        const series = this.options.series.filter(srs => srs.filter(s => s.data.length > 0).length > 0);
         if (series.length === 0) {
             return;
         }
@@ -116,10 +116,8 @@ export class RenderModel {
                     s.minmax = calcMinMaxY(s.data, 0, s.data.length);
                     nmm = s.minmax;
                 }
-                if (mm.min > nmm.min)
-                    mm.min = nmm.min;
-                if (mm.max < nmm.max)
-                    mm.max = nmm.max;
+                mm.min = Math.min(mm.min, nmm.min);
+                mm.max = Math.max(mm.max, nmm.max);
             }
             this.yRanges![i] = mm;
             if (yRange === 'auto') {

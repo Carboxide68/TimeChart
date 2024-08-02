@@ -60,7 +60,7 @@ export class NearestPoint {
                     intersect.style.visibility = 'hidden';
                 } else {
                     intersect.style.visibility = 'visible';
-                    const p = this.model.pxPoint(point);
+                    const p = this.model.pxPoint(point.dp);
                     intersect.transform.baseVal.getItem(0).setTranslate(p.x, p.ys[i]);
                 }
             }

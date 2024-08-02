@@ -114,6 +114,7 @@ export interface TimeChartSeriesOptions {
     lineType: LineType;
     stepLocation: number;
     minmax?: { min: number, max: number };
+    order: number,
     inLegend: boolean,
     labels: Map<number, string>,
     yAxisN: number,

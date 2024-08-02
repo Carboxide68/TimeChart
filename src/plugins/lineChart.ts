@@ -74,9 +74,10 @@ vec2 dataPoint(int index) {
 const LINE_FS_SOURCE = `#version 300 es
 precision lowp float;
 uniform vec4 uColor;
+uniform float uOpacity;
 out vec4 outColor;
 void main() {
-    outColor = uColor;
+    outColor = vec4(uColor.xyz, uOpacity);
 }`;
 
 class NativeLineProgram extends LinkedWebGLProgram {
@@ -99,6 +100,7 @@ void main() {
             uDataPoints: this.getUniformLocation('uDataPoints'),
             uPointSize: this.getUniformLocation('uPointSize'),
             uColor: this.getUniformLocation('uColor'),
+            uOpacity: this.getUniformLocation('uOpacity'),
         }
 
         this.use();
@@ -150,6 +152,7 @@ void main() {
             uStepLocation: this.getUniformLocation('uStepLocation'),
             uLineWidth: this.getUniformLocation('uLineWidth'),
             uColor: this.getUniformLocation('uColor'),
+            uOpacity: this.getUniformLocation('uOpacity'),
         }
 
         this.use();
@@ -198,6 +201,7 @@ void main() {
             uDataPoints: this.getUniformLocation('uDataPoints'),
             uLineWidth: this.getUniformLocation('uLineWidth'),
             uColor: this.getUniformLocation('uColor'),
+            uOpacity: this.getUniformLocation('uOpacity'),
         }
 
         this.use();
@@ -557,72 +561,72 @@ export class LineChartRenderer {
         this.syncBuffer();
         gl.enable(gl.DEPTH_TEST);
         gl.enable(gl.BLEND);
-        for (let n = 0; n < this.options.series.length; n++) {
-            this.syncDomain(n);
+        let arrays = Array.from(this.arrays).sort(([ds1, arr1], [ds2, arr2]) => ds1.order - ds2.order);
+        for (const [ds, arr] of arrays) {
+            this.syncDomain(ds.yAxisN);
             this.uniformBuffer.upload();
-            for (const [ds, arr] of this.arrays) {
-                if (!ds.visible || ds.yAxisN != n) {
-                    continue;
-                }
-
-                let prog = null;
-                switch(ds.lineType) {
-                    case LineType.Step:
-                    case LineType.Line:
-                        prog = this.lineProgram;
-                        break;
-                    case LineType.NativeLine:
-                    case LineType.NativePoint:
-                        prog = this.nativeLineProgram;
-                        break;
-                    case LineType.vLine: 
-                        prog = this.separatorProgram;
-                        break;
-                    case LineType.State:
-                        prog = this.stateProgram;
-                        break;
-                    default: 
-                        prog = this.lineProgram;
-                        break;
-                }
-                prog.use();
-                gl.disableVertexAttribArray(0);
-                const color = resolveColorRGBA(ds.color ?? this.options.color);
-
-                const lineWidth = ds.lineWidth ?? this.options.lineWidth;
-                if (prog instanceof LineProgram) {
-                    gl.uniform4fv(prog.locations.uColor, color);
-                    gl.uniform1i(prog.locations.uLineType, ds.lineType);
-                    gl.uniform1f(prog.locations.uLineWidth, lineWidth / 2);
-                    if (ds.lineType === LineType.Step)
-                        gl.uniform1f(prog.locations.uStepLocation, ds.stepLocation);
-
-                } else if (prog instanceof SeparatorProgram) {
-                    gl.uniform4fv(prog.locations.uColor, color);
-                    gl.uniform1f(prog.locations.uLineWidth, lineWidth / 2.0);
-                } else if (prog instanceof NativeLineProgram) {
-                    gl.uniform4fv(prog.locations.uColor, color);
-                    if (ds.lineType === LineType.NativeLine)
-                        gl.lineWidth(lineWidth * this.options.pixelRatio);  // Not working on most platforms
-                    else if (ds.lineType === LineType.NativePoint)
-                        gl.uniform1f(prog.locations.uPointSize, lineWidth * this.options.pixelRatio);
-                } else if (prog instanceof StateProgram) {
-                    gl.uniform1f(prog.locations.uOpacity, ds.opacity ?? 0.5);
-                    gl.uniform1i(prog.locations.uHoverPoint, ds.stepLocation + 1);
-                }
-
-                const renderDomain = {
-                    min: this.model.xScale.invert(this.options.renderPaddingLeft - lineWidth / 2),
-                    max: this.model.xScale.invert(this.width - this.options.renderPaddingRight + lineWidth / 2),
-                };
-                arr.draw(renderDomain);
+            if (!ds.visible) {
+                continue;
             }
-            if (this.options.debugWebGL) {
-                const err = gl.getError();
-                if (err != gl.NO_ERROR) {
-                    throw new Error(`WebGL error ${err}`);
-                }
+
+            let prog = null;
+            switch(ds.lineType) {
+                case LineType.Step:
+                case LineType.Line:
+                    prog = this.lineProgram;
+                    break;
+                case LineType.NativeLine:
+                case LineType.NativePoint:
+                    prog = this.nativeLineProgram;
+                    break;
+                case LineType.vLine: 
+                    prog = this.separatorProgram;
+                    break;
+                case LineType.State:
+                    prog = this.stateProgram;
+                    break;
+                default: 
+                    prog = this.lineProgram;
+                    break;
             }
+            prog.use();
+            gl.disableVertexAttribArray(0);
+            const color = resolveColorRGBA(ds.color ?? this.options.color);
+
+            const lineWidth = ds.lineWidth ?? this.options.lineWidth;
+            gl.uniform1f(prog.locations.uOpacity, ds.opacity ?? 1.0);
+            if (prog instanceof LineProgram) {
+                gl.uniform4fv(prog.locations.uColor, color);
+                gl.uniform1i(prog.locations.uLineType, ds.lineType);
+                gl.uniform1f(prog.locations.uLineWidth, lineWidth / 2);
+                if (ds.lineType === LineType.Step)
+                    gl.uniform1f(prog.locations.uStepLocation, ds.stepLocation);
+
+            } else if (prog instanceof SeparatorProgram) {
+                gl.uniform4fv(prog.locations.uColor, color);
+                gl.uniform1f(prog.locations.uLineWidth, lineWidth / 2.0);
+            } else if (prog instanceof NativeLineProgram) {
+                gl.uniform4fv(prog.locations.uColor, color);
+                if (ds.lineType === LineType.NativeLine)
+                    gl.lineWidth(lineWidth * this.options.pixelRatio);  // Not working on most platforms
+                else if (ds.lineType === LineType.NativePoint)
+                    gl.uniform1f(prog.locations.uPointSize, lineWidth * this.options.pixelRatio);
+            } else if (prog instanceof StateProgram) {
+                gl.uniform1f(prog.locations.uOpacity, ds.opacity ?? 0.5);
+                gl.uniform1i(prog.locations.uHoverPoint, ds.stepLocation + 1);
+            }
+
+            const renderDomain = {
+                min: this.model.xScale.invert(this.options.renderPaddingLeft - lineWidth / 2),
+                max: this.model.xScale.invert(this.width - this.options.renderPaddingRight + lineWidth / 2),
+            };
+            arr.draw(renderDomain);
+        }
+        if (this.options.debugWebGL) {
+            const err = gl.getError();
+            if (err != gl.NO_ERROR) {
+                throw new Error(`WebGL error ${err}`);
+        }
         }
     }
 

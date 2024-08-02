@@ -5,7 +5,7 @@ import { ContentBoxDetector } from "./contentBoxDetector";
 import { DataPoint, RenderModel } from './renderModel';
 
 export class NearestPointModel {
-    dataPoints = new Map<TimeChartSeriesOptions, DataPoint>();
+    dataPoints = new Map<TimeChartSeriesOptions, {dp: DataPoint, i: number}>();
     lastPointerPos: null | {x: number, y: number} = null;
 
     updated = new EventDispatcher();
@@ -46,19 +46,19 @@ export class NearestPointModel {
                     }
                     const pos = domainSearch(s.data, 0, s.data.length, domain, d => d.x);
                     if (s.lineType == LineType.State && pos > 0) {
-                        this.dataPoints.set(s, s.data[pos - 1]);
+                        this.dataPoints.set(s, { dp: s.data[pos - 1], i: pos - 1});
                         continue;
                     }
-                    const near: DataPoint[] = [];
+                    const near: {dp: DataPoint, i: number}[] = [];
                     if (pos > 0) {
-                        near.push(s.data[pos - 1]);
+                        near.push({dp: s.data[pos - 1], i: pos - 1});
                     }
                     if (pos < s.data.length) {
-                        near.push(s.data[pos]);
+                        near.push({ dp: s.data[pos], i: pos});
                     }
-                    const sortKey = (a: typeof near[0]) => Math.abs(a.x - domain);
+                    const sortKey = (a: typeof near[0]) => Math.abs(a.dp.x - domain);
                     near.sort((a, b) => sortKey(a) - sortKey(b));
-                    const pxPoint = this.model.pxPoint(near[0]);
+                    const pxPoint = this.model.pxPoint(near[0].dp);
                     const width = this.canvas.canvas.clientWidth;
                     const height = this.canvas.canvas.clientHeight;
 

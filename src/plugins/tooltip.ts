@@ -113,13 +113,13 @@ td {
             let minPointerDistance = Number.POSITIVE_INFINITY;
             let displayingX: number | null = null;
             for (const [s, d] of chart.nearestPoint.dataPoints) {
-                const px = chart.model.pxPoint(d);
+                const px = chart.model.pxPoint(d.dp);
                 const dx = px.x - p.x;
                 const dy = px.ys[s.yAxisN] - p.y;
                 const dis = Math.sqrt(dx * dx + dy * dy);
                 if (dis < minPointerDistance) {
                     minPointerDistance = dis;
-                    displayingX = d.x;
+                    displayingX = d.dp.x;
                 }
             }
 
@@ -137,8 +137,8 @@ td {
                     if (s.lineType == LineType.State) {
                         if (!s.labels) continue;
                         if (point) {
-                            item.value.textContent = s.labels.get(point.y) ?? "";
-                            s.stepLocation = indexOfSorted(s.data, point.x, (p) => p.x);
+                            item.value.textContent = s.labels.get(point.dp.y) ?? "";
+                            s.stepLocation = point.i;
                             //s.stepLocation = s.data.indexOf(point);
                         } else
                             item.value.textContent = "";
@@ -146,8 +146,8 @@ td {
                     }
                     item.item.classList.toggle('out-of-range', !point);
                     if (point) {
-                        item.value.textContent = point.y.toLocaleString();
-                        item.item.classList.toggle('x-not-aligned', point.x !== displayingX);
+                        item.value.textContent = point.dp.y.toLocaleString();
+                        item.item.classList.toggle('x-not-aligned', point.dp.x !== displayingX);
                     }
                 }
             }
@@ -176,6 +176,7 @@ td {
     update() {
         for (const srs of this.chartOptions.series) {
             for (const s of srs) {
+                if (s.lineType == LineType.vLine) continue;
                 if (!this.items.has(s)) {
                     const itemElements = this.createItemElements(s.name);
                     this.itemContainer.appendChild(itemElements.item);

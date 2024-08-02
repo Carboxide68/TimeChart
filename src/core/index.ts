@@ -57,6 +57,20 @@ function completeSeriesOptions(s: Partial<TimeChartSeriesOptions>, series_index:
     } else
         s.data = s.data ? DataPointsBuffer._from_array(s.data) : new DataPointsBuffer();
     s.yAxisN = series_index;
+    if (!s.order)
+        switch (s.lineType ?? LineType.Line) {
+            case LineType.Line:
+            case LineType.NativeLine:
+            case LineType.NativePoint:
+            case LineType.Step:
+                s.order = 1;
+                break;
+            case LineType.vLine:
+                s.order = 3;
+                break;
+            case LineType.State:
+                s.order = -1;
+        };
     Object.setPrototypeOf(s, defaultSeriesOptions);
     return s as TimeChartSeriesOptions;
 }
