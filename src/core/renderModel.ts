@@ -80,7 +80,7 @@ export class RenderModel {
     }
 
     updateModel() {
-        const series = this.options.series.filter(srs => srs.filter(s => s.data.length > 0).length > 0);
+        const series = this.options.series.map(srs => srs.filter(s => s.data.length > 0)).filter(srs => srs.length > 0);
         if (series.length === 0) {
             return;
         }
