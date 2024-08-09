@@ -40,7 +40,8 @@ export class TimeChartZoom {
             z.update();
         });
         z.onScaleUpdated(() => {
-            chart.options.xRange = null;
+            if (chart.options.xRange !== 'synced')
+                chart.options.xRange = null;
             for (let i = 0; i < chart.options.yRanges.length; i++) chart.options.yRanges[i] = null;
             chart.options.realTime = false;
             chart.update();

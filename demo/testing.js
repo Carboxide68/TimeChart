@@ -11,6 +11,7 @@ const labels = {
 
 window.addEventListener('load', (_) => {
   const el = document.getElementById('chart');
+  const el2 = document.getElementById('chart2');
   const data = [];
   const data2 = [];
   let data3 = [];
@@ -26,7 +27,6 @@ window.addEventListener('load', (_) => {
   data3[1].y = "green";
   data3[2].y = "blue";
   const chart = new TimeChart(el, {
-      
       series: [[
         { 
           data: data, 
@@ -56,4 +56,36 @@ window.addEventListener('load', (_) => {
       },
 
   });
+  const chart2 = new TimeChart(el2, {
+      series: [[
+        { 
+          data: data, 
+          name: 'Random', 
+          lineType: TimeChart.LineType.vLine,
+          lineWidth: 0.5,
+        },
+        { 
+          data: data2, 
+          name: 'Rising',
+          lineType: TimeChart.LineType.Line,
+        }
+      ],[
+        {
+          data: data3,
+          name: 'States',
+          lineType: TimeChart.LineType.State,
+          labels: labels,
+        },
+      ]],
+      xScaleType: d3.scaleLinear,
+      tooltip: {enabled: true},
+      zoom: {
+        x: {
+          autoRange: true,
+        },
+      },
+  });
+  const xdomain = {min: 0, max: 100};
+  chart.syncX(xdomain);
+  chart2.syncX(xdomain);
 });

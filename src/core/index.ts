@@ -154,6 +154,11 @@ export default class TimeChart<TPlugins extends TimeChartPlugins=NoPlugin> {
         this.model.requestRedraw();
     }
 
+    syncX(domain: {min: number, max: number}) {
+        this.options.xRange = 'synced';
+        this.model.xDomain = domain;
+    }
+
     dispose() {
         this.model.dispose();
         this.disposed = true;

@@ -61,7 +61,7 @@ interface TimeChartRenderOptions {
     legend: boolean;
     tooltip: Partial<TooltipOptions>;
 
-    xRange: Range;
+    xRange: Range | 'synced';
     yRanges: Range[];
     realTime: boolean;
 
