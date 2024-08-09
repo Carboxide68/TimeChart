@@ -159,6 +159,12 @@ export default class TimeChart<TPlugins extends TimeChartPlugins=NoPlugin> {
         this.model.xDomain = domain;
     }
 
+    desyncX() {
+        this.options.xRange = null;
+        const domain = this.model.xDomain;
+        this.model.xDomain = {min: domain.min, max: domain.max};
+    }
+
     dispose() {
         this.model.dispose();
         this.disposed = true;
