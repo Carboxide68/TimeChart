@@ -81,13 +81,7 @@ export class RenderModel {
     }
 
     updateModel() {
-        // This line right below was maddening to debug.
-        // Don't set the outer function as a debug, because then
-        // the condition below doesn't work. That means that you can
-        // corrupt this.xScale.domain when realTime is set, and end
-        // up having errors in searchDomain. These errors are not easily
-        // traced back to here.
-        const series = this.options.series.filter( srs => srs.filter( s => s.data.length > 0 ).length > 0 );
+        const series = this.options.series.map( srs => srs.filter( s => s.data.length > 0 ) ).filter(srs => srs.length > 0);
         if (series.length === 0) {
             return;
         }
