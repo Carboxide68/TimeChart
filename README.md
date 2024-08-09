@@ -56,7 +56,7 @@ for (let x = 0; x < 100; x++) {
     data.push({x, y: Math.random()});
 }
 const chart = new TimeChart(el, {
-    series: [{ data }],
+    series: [[{ data }]],
 });
 ```
 [Live](https://huww98.github.io/TimeChart/demo/basic.html)
@@ -70,42 +70,13 @@ You can pick the plugins you need, so that you don't pay for functions you don't
 
 Offical plugins:
 * lineChart: draw the line chart with WebGL, the biggest selling point of this library.
-* d3Axis: intergret with [d3-axis](https://github.com/d3/d3-axis) to draw the axes.
+* d3Axis: integrate with [d3-axis](https://github.com/d3/d3-axis) to draw the axes.
 * legend: show a legend at top-right.
 * crosshair: show crosshair under the mouse.
 * nearestPoint: highlight the data points in each series that is nearest to the mouse.
 * chartZoom: respond to mouse, keyboard, touch event to zoom/pan the chart. See also [the interaction method](#interaction)
 
-As an example, to assemble your own chart with all offical plugins added:
-```JavaScript
-import TimeChart from 'timechart/core';
-import { lineChart } from 'timechart/plugins/lineChart';
-import { d3Axis } from 'timechart/plugins/d3Axis';
-import { legend } from 'timechart/plugins/legend';
-import { crosshair } from 'timechart/plugins/crosshair';
-import { nearestPoint } from 'timechart/plugins/nearestPoint';
-import { TimeChartZoomPlugin } from 'timechart/plugins/chartZoom';
-
-const el = document.getElementById('chart');
-const chart = new TimeChart(el, {
-    data: {...},
-    plugins: {
-        lineChart,
-        d3Axis,
-        legend,
-        crosshair,
-        nearestPoint,
-        zoom: new TimeChartZoomPlugin({...}),
-        tooltip: new TimeChartTooltipPlugin({...}),
-    }
-});
-```
-
-This is almost equivalent to just `import TimeChart from 'timechart';`, except:
-* The [zoom options](#zoom-options) are now passed directly to `TimeChartZoomPlugin`.
-* To change the zoom options dynamically, use `chart.plugins.zoom.options` instead of original `chart.options.zoom`.
-
-You can also write your own plugins. Read [the guide](docs/authoring_plugins).
+You can also write your own plugins. Read [the guide](docs/authoring_plugins.md).
 
 For users who use HTML script tag to import TimeChart, use this instead:
 
@@ -138,7 +109,7 @@ Illegal modification by the overrode `splice` prototype method will lead to an e
   ```JavaScript
   const data = [...];  // Assume it contains 10 data points
   const chart = new TimeChart(el, {
-      series: [{ data }],
+      series: [[{ data }]],
   });
   data.push({x, y}, {x, y}, {x, y});  // OK
   data.splice(-2, 1);  // OK, data not synced yet
@@ -163,10 +134,10 @@ Illegal modification by the overrode `splice` prototype method will lead to an e
 
   // build the chart
   const chart = new TimeChart(el, {
-      series: [{
+      series: [[{
           name: 'foo',
           data: bar
-      }],
+      }]],
       baseTime: startTime,
   });
 
@@ -184,7 +155,7 @@ Illegal modification by the overrode `splice` prototype method will lead to an e
 Specify these options in top level option object. e.g. to specify `lineWidth`:
 ```JavaScript
 const chart = new TimeChart(el, {
-    series: [{ data }],
+    series: [[{ data }]],
     lineWidth: 10,
 });
 ```
@@ -209,7 +180,8 @@ const chart = new TimeChart(el, {
 
   default: 0
 
-* xRange / yRange ({min: number, max: number} or 'auto'): The range of x / y axes. Also use this to control pan / zoom programmatically. Specify `'auto'` to calculate these range from data automatically. Data points outside these range will be drawn in padding area, to display as much data as possible to user.
+* xRange ({min: number, max: number} or 'auto'): The range of the x axis. Also use this to control pan / zoom programmatically. Specify `'auto'` to calculate these range from data automatically. Data points outside these range will be drawn in padding area, to display as much data as possible to user.
+* yRanges (({min: number, max: number} or 'auto')[]): The range of y axes. Also use this to control pan / zoom programmatically. Specify `'auto'` to calculate these range from data automatically. Data points outside these range will be drawn in padding area, to display as much data as possible to user.
 
   default: 'auto'
 
@@ -242,10 +214,10 @@ from d3-scale are known to work.
 Specify these options in series option object. e.g. to specify `lineWidth`:
 ```JavaScript
 const chart = new TimeChart(el, {
-    series: [{
+    series: [[{
         data,
         lineWidth: 10,
-    }],
+    }]],
 });
 ```
 
@@ -262,12 +234,18 @@ const chart = new TimeChart(el, {
     This is faster than LineType.Line, but the line width is fixed at 1 pixel on most devices.
   * LineType.NativePoint: draw points at each data point using native WebGL point drawing capability.
     lineWidth is reused to specify point size in this case.
+  * LineType.vLine: Vertical line, only x-value matters.
+  * LineType.State: Color coded state diagram. Let x-value determine where state begins, and y-value be the color for that state.
+    Provide an additional field `label` to the series, which is a map from color of state to name. The color of the state has to be
+    unique for the labels work correctly. 
 
   default: LineType.Line
 
 * stepLocation (number): Only effective if `lineType === LineType.Step`. Where to draw the vertical line. Specified as a ratio of the distance between two adjacent data points. Usually in the range of [0, 1].
 
   default: 0.5
+
+* label ({`color`: `label`, ...}): Only effective if `lineType === LineType.State`. Determines labels of different states.
 
 * name (string): The name of the series. Will be shown in legend and tooltips.
 
@@ -288,14 +266,14 @@ These options enable the builtin touch / mouse / trackpad [interaction](#interac
 Specify these options in zoom option object. e.g. to specify `autoRange`:
 ```JavaScript
 const chart = new TimeChart(el, {
-    series: [{ data }],
+    series: [[{ data }]],
     zoom: {
         x: {
             autoRange: true,
         },
-        y: {
+        ys: [{
             autoRange: true,
-        }
+        }]
     }
 });
 ```
@@ -305,7 +283,7 @@ New in v1. If you are [using the plugins](#assemble_your_own_chart), pass these 
 import TimeChart from 'timechart/core';
 import { TimeChartZoomPlugin } from 'timechart/plugins/chartZoom';
 const chart = new TimeChart(el, {
-    series: [{ data }],
+    series: [[{ data }]],
     plugins: {
         zoom: new TimeChartZoomPlugin({x: {autoRange: true}})
     },
@@ -373,6 +351,8 @@ const chart = new TimeChart(el, {
 * `chart.dispose()`: Dispose all the resources used by this chart instance.
   Note: We use shadow root to protect the chart from unintended style conflict. However, there is no easy way to remove the shadow root after dispose.
   But you can reuse the same HTML element to create another TimeChart. [Example](https://huww98.github.io/TimeChart/demo/reset.html)
+
+* `chart.syncX(domain: {min: number, max: number})`: Give an external domain to sync multiple charts.
 
 * `chart.onResize()`: Calculate size after layout changes.
   This method is automatically called when window size changed.
