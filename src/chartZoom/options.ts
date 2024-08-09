@@ -1,5 +1,6 @@
 import { ScaleLinear } from "d3-scale";
 
+type MinMax = {min: number, max: number};
 export enum DIRECTION {
     UNKNOWN, X, Y,
 }
@@ -10,7 +11,8 @@ export interface Point {
 }
 
 export interface AxisOptions {
-    scale: ScaleLinear<number, number>;
+    domain: MinMax;
+    range: MinMax;
     minDomain?: number;
     maxDomain?: number;
     minDomainExtent?: number;
@@ -18,7 +20,8 @@ export interface AxisOptions {
 }
 
 export interface ResolvedAxisOptions {
-    scale: ScaleLinear<number, number>;
+    domain: MinMax;
+    range: MinMax;
     minDomain: number;
     maxDomain: number;
     minDomainExtent: number;

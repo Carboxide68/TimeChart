@@ -1,4 +1,5 @@
 import core from '../core';
+import { convert } from '../utils';
 import { TimeChartPlugin } from '../plugins';
 import { select } from 'd3-selection';
 
@@ -43,7 +44,8 @@ export class EventsPlugin implements TimeChartPlugin<EventsPlugin> {
                 .attr('dy', '0.8em');
 
             const allEventEl = eventEl.merge(newEventEl)
-            allEventEl.attr('transform', d => `translate(${chart.model.xScale(d.x)}, 0)`)
+            const m = chart.model;
+            allEventEl.attr('transform', d => `translate(${convert(m.xDomain, m.xScreen, d.x)}, 0)`)
             allEventEl.select('text')
                 .text(d => d.name)
         });

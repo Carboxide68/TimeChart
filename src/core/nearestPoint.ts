@@ -1,5 +1,5 @@
 import { ResolvedCoreOptions, TimeChartSeriesOptions, LineType } from '../options';
-import { domainSearch, EventDispatcher } from '../utils';
+import { domainSearch, EventDispatcher, MinMax, convert } from '../utils';
 import { CanvasLayer } from './canvasLayer';
 import { ContentBoxDetector } from "./contentBoxDetector";
 import { DataPoint, RenderModel } from './renderModel';
@@ -36,7 +36,7 @@ export class NearestPointModel {
         if (this.lastPointerPos === null) {
             this.dataPoints.clear();
         } else {
-            const domain = this.model.xScale.invert(this.lastPointerPos.x);
+            const domain = convert(this.model.xScreen, this.model.xDomain, this.lastPointerPos.x);
             for (let i = 0; i < this.options.series.length; i++) {
                 const srs = this.options.series[i];
                 for (const s of srs) {

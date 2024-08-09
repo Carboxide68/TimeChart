@@ -1,5 +1,6 @@
 import core from "../core";
 import { TimeChartPlugin } from "../plugins";
+import { MinMax, convert } from '../utils';
 
 export interface SelectZoomOptions {
     mouseButtons: number;
@@ -121,17 +122,15 @@ export class SelectZoom {
             return;
 
         const p = this.getPoint(ev);
+        const m = this.chart.model;
 
         let changed = false;
         if (this.options.enableX) {
             const x1 = Math.min(this.start.p.x, p.x);
             const x2 = Math.max(this.start.p.x, p.x);
             if (x2 - x1 > 0) {
-                const newDomain = [
-                    this.chart.model.xScale.invert(x1),
-                    this.chart.model.xScale.invert(x2),
-                ];
-                this.chart.model.xScale.domain(newDomain);
+                m.xDomain.min = convert(m.xScreen, m.xDomain, x1);
+                m.xDomain.max = convert(m.xScreen, m.xDomain, x2);
                 this.chart.options.xRange = null;
                 changed = true;
             }
@@ -139,14 +138,10 @@ export class SelectZoom {
         if (this.options.enableY) {
             const y1 = Math.max(this.start.p.y, p.y);
             const y2 = Math.min(this.start.p.y, p.y);
-            for (let i = 0; i < this.chart.model.yScales.length; i++) {
-            const yScale = this.chart.model.yScales[i];
-            if (y1 - y2 > 0) {
-                const newDomain = [
-                    yScale.invert(y1),
-                    yScale.invert(y2),
-                ];
-                yScale.domain(newDomain);
+            for (let i = 0; i < m.yDomains.length; i++) {
+                if (y1 - y2 > 0) {
+                    m.yDomains[i].min = convert(m.yScreen, m.yDomains[i], y1);
+                    m.yDomains[i].max = convert(m.yScreen, m.yDomains[i], y2);
                 this.chart.options.yRanges[i] = null;
                 changed = true;
             }

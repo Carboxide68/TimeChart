@@ -30,9 +30,9 @@ export class ChartZoomMouse {
         let changed = false;
         for (const { dir, op } of dirOptions(this.options)) {
             const offset = p[dir] - this.previousPoint[dir];
-            const k = scaleK(op.scale);
-            const domain = op.scale.domain();
-            const newDomain = domain.map(d => d - k * offset);
+            const k = scaleK(op.domain, op.range);
+            const domain = op.domain;
+            const newDomain = {min: domain.min - k * offset, max: domain.max - k * offset};
             if (applyNewDomain(op, newDomain)) {
                 changed = true;
             }

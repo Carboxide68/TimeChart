@@ -1,6 +1,6 @@
 import { DataPoint, RenderModel } from "../core/renderModel";
 import { resolveColorRGBA, ResolvedCoreOptions, TimeChartSeriesOptions, LineType } from '../options';
-import { domainSearch } from '../utils';
+import { domainSearch, convert } from '../utils';
 import { vec2 } from 'gl-matrix';
 import { TimeChartPlugin } from '.';
 import { LinkedWebGLProgram, throwIfFalsy } from './webGLUtils';
@@ -616,9 +616,10 @@ export class LineChartRenderer {
                 gl.uniform1i(prog.locations.uHoverPoint, ds.stepLocation + 1);
             }
 
+            const m = this.model;
             const renderDomain = {
-                min: this.model.xScale.invert(this.options.renderPaddingLeft - lineWidth / 2),
-                max: this.model.xScale.invert(this.width - this.options.renderPaddingRight + lineWidth / 2),
+                min: convert(m.xScreen, m.xDomain, this.options.renderPaddingLeft - lineWidth / 2),
+                max: convert(m.xScreen, m.xDomain, this.width - this.options.renderPaddingRight + lineWidth / 2),
             };
             arr.draw(renderDomain);
         }
@@ -639,19 +640,15 @@ export class LineChartRenderer {
         // => s = (range[1] - range[0]) / (domain[1] - domain[0])
         //    t = (range[0] - W / 2 - padding) / s - domain[0]
 
-        const yScale = m.yScales[series_n];
         // Not using vec2 for precision
-        const xDomain = m.xScale.domain();
-        const xRange = m.xScale.range();
-        const yDomain = yScale.domain();
-        const yRange = yScale.range();
+        const yDomain = m.yDomains[series_n];
         const s = [
-            (xRange[1] - xRange[0]) / (xDomain[1] - xDomain[0]),
-            (yRange[0] - yRange[1]) / (yDomain[1] - yDomain[0]),
+            (m.xScreen.max - m.xScreen.min) / (m.xDomain.max - m.xDomain.min),
+            (m.yScreen.min - m.yScreen.max) / (yDomain.max - yDomain.min),
         ];
         const t = [
-            (xRange[0] - this.renderWidth / 2 - this.options.renderPaddingLeft) / s[0] - xDomain[0],
-            -(yRange[0] - this.renderHeight / 2 - this.options.renderPaddingTop) / s[1] - yDomain[0],
+            -convert(m.xScreen, m.xDomain, this.renderWidth/2 + this.options.renderPaddingLeft),
+            -convert(m.yScreen, yDomain, this.renderHeight / 2 + this.options.renderPaddingTop),
         ];
 
         this.uniformBuffer.modelScale.set(s);

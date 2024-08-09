@@ -1,6 +1,7 @@
 import { ScaleLinear } from 'd3-scale';
 import { ResolvedAxisOptions } from './options';
 
+type MinMax = {min: number, max: number};
 export function zip<T1, T2>(...rows: [T1[], T2[]]) {
     return [...rows[0]].map((_, c) => rows.map(row => row[c])) as [T1, T2][];
 }
@@ -35,39 +36,35 @@ export function linearRegression(data: { x: number, y: number }[]) {
     return { k, b };
 }
 
-export function scaleK(scale: ScaleLinear<number, number>) {
-    const domain = scale.domain();
-    const range = scale.range();
-    return (domain[1] - domain[0]) / (range[1] - range[0]);
+export function scaleK(domain: MinMax, range: MinMax) {
+    return (domain.max - domain.min) / (range.max - range.min);
 }
 
 /**
  * @returns If domain changed
  */
-export function applyNewDomain(op: ResolvedAxisOptions, domain: number[]) {
-    const inExtent = domain[1] - domain[0];
+export function applyNewDomain(op: ResolvedAxisOptions, domain: MinMax) {
+    const inExtent = domain.max - domain.min;
 
-    const previousDomain = op.scale.domain();
-    if ((previousDomain[1] - previousDomain[0]) * inExtent <= 0) {
+    const prev = {min: op.domain.min, max: op.domain.max};
+    if ((prev.max - prev.min) * inExtent <= 0) {
         // forbidden reverse direction.
         return false;
     }
 
     const extent = Math.min(op.maxDomainExtent, op.maxDomain - op.minDomain, Math.max(op.minDomainExtent, inExtent));
     const deltaE = (extent - inExtent) / 2;
-    domain[0] -= deltaE;
-    domain[1] += deltaE;
+    domain.min -= deltaE;
+    domain.max += deltaE;
 
-    const deltaO = Math.min(Math.max(op.minDomain - domain[0], 0), op.maxDomain - domain[1]);
-    domain[0] += deltaO;
-    domain[1] += deltaO;
+    const deltaO = Math.min(Math.max(op.minDomain - domain.min, 0), op.maxDomain - domain.max);
+    domain.min += deltaO;
+    domain.max += deltaO;
 
     const eps = extent * 1e-6;
-    op.scale.domain(domain);
-    if (zip(domain, previousDomain).some(([d, pd]) => Math.abs(d - pd) > eps)) {
-        return true;
-    }
-    return false;
+    op.domain.min = domain.min;
+    op.domain.max = domain.max;
+    return Math.abs(domain.max - prev.max) > eps || Math.abs(domain.min - prev.min) > eps;
 }
 
 export function variance(data: number[]) {

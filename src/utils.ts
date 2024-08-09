@@ -1,4 +1,6 @@
 import { rgb } from 'd3-color';
+
+export type MinMax = {min: number, max: number};
 /** lower bound */
 export function domainSearch<T>(data: ArrayLike<T>, start: number, end: number, value: number, key: (v: T) => number) {
     if (start >= end) {
@@ -78,3 +80,8 @@ export function quantizeColor(col: any) {
     return q;
 }
 
+// Get relative position in a as value in b
+// Replaces scaleLinear(a, b).scale(c)
+export function convert(a: MinMax, b: MinMax, c: number) {
+    return b.min + (b.max - b.min) * (c - a.min)/(a.max - a.min)
+}

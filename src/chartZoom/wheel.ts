@@ -1,4 +1,4 @@
-import { EventDispatcher } from '../utils';
+import { EventDispatcher, MinMax, convert } from '../utils';
 import { CapableElement, DIRECTION, dirOptions, ResolvedOptions } from "./options";
 import { applyNewDomain, clamp, scaleK } from './utils';
 
@@ -58,10 +58,10 @@ export class ChartZoomWheel {
 
         let changed = false;
         for (const { dir, op } of dirOptions(this.options)) {
-            const domain = op.scale.domain();
-            const k = scaleK(op.scale);
+            const domain = op.domain;
+            const k = scaleK(op.domain, op.range);
             const trans = transform[dir];
-            const transOrigin = op.scale.invert(origin[dir]);
+            const transOrigin = convert(op.range, op.domain, origin[dir]);
             trans.translate *= k;
             trans.zoom *= 0.002;
             if (event.shiftKey) {
@@ -69,14 +69,17 @@ export class ChartZoomWheel {
                 trans.zoom *= 5;
             }
 
-            const extent = domain[1] - domain[0];
+            const extent = domain.max - domain.min;
             const translateCap = 0.4 * extent;
             trans.translate = clamp(trans.translate, -translateCap, translateCap);
 
             const zoomCap = 0.5;
             trans.zoom = clamp(trans.zoom, -zoomCap, zoomCap);
 
-            const newDomain = domain.map(d => d + trans.translate + (d - transOrigin) * trans.zoom);
+            const newDomain = {
+                min: domain.min + trans.translate + (domain.min - transOrigin) * trans.zoom,
+                max: domain.max + trans.translate + (domain.max - transOrigin) * trans.zoom,
+            };
             if (applyNewDomain(op, newDomain)) {
                 changed = true;
             }

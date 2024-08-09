@@ -1,13 +1,11 @@
 import { ScaleLinear, scaleLinear } from "d3-scale";
 import { ResolvedCoreOptions, LineType } from '../options';
-import { EventDispatcher } from '../utils';
+import { EventDispatcher, MinMax, convert } from '../utils';
 
 export interface DataPoint {
     x: number;
     y: number;
 }
-
-export interface MinMax { min: number; max: number; }
 
 function calcMinMaxY(arr: DataPoint[], start: number, end: number): MinMax {
     let max = -Infinity;
@@ -27,23 +25,26 @@ function unionMinMax(...items: MinMax[]) {
     };
 }
 
+
 export class RenderModel {
-    xScale = scaleLinear();
-    yScales: ScaleLinear<number, number, never>[];
+    xDomain: MinMax;
+    xScreen: MinMax;
+    yDomains: MinMax[];
+    yScreen: MinMax;
     xRange: MinMax | null = null;
     yRanges: MinMax[] | null = null;
-
+    
     constructor(private options: ResolvedCoreOptions) {
-        this.yScales = [];
-        for (let tmp in options.series) {
-            this.yScales.push(scaleLinear());
-        }
+        this.xDomain = {min: 0, max: 0};
+        this.xScreen = {min: 0, max: 0};
+        this.yScreen = {min: 0, max: 0};
+        this.yDomains = options.series.map(_ => ({min: 0, max: 0}));
         if (options.xRange !== 'auto' && options.xRange) {
-            this.xScale.domain([options.xRange.min, options.xRange.max])
+            this.xDomain = {min: options.xRange.min, max: options.xRange.max};
         }
         options.yRanges.forEach( (yRange, i) => {
             if (yRange !== 'auto' && yRange) {
-                this.yScales[i].domain([yRange.min, yRange.max])
+                this.yDomains[i] = {min: yRange.min, max: yRange.max};
             }
         });
     }
@@ -51,8 +52,8 @@ export class RenderModel {
     resized = new EventDispatcher<(width: number, height: number) => void>();
     resize(width: number, height: number) {
         const op = this.options;
-        this.xScale.range([op.paddingLeft, width - op.paddingRight]);
-        this.yScales.map((yScale) => (yScale.range([height - op.paddingBottom, op.paddingTop])));
+        this.xScreen = {min: op.paddingLeft, max: width - op.paddingRight};
+        this.yScreen = {min: height - op.paddingBottom, max: op.paddingTop};
 
         this.resized.dispatch(width, height)
         this.requestRedraw()
@@ -93,14 +94,17 @@ export class RenderModel {
             this.xRange = { max: maxDomain, min: minDomain };
             if (this.options.realTime || o.xRange === 'auto') {
                 if (this.options.realTime) {
-                    const currentDomain = this.xScale.domain();
-                    const range = currentDomain[1] - currentDomain[0];
-                    this.xScale.domain([maxDomain - range, maxDomain]);
+                    const currentDomain = this.xDomain;
+                    const range = currentDomain.max - currentDomain.min;
+                    this.xDomain.min = maxDomain - range;
+                    this.xDomain.max =  maxDomain;
                 } else { // Auto
-                    this.xScale.domain([minDomain, maxDomain]);
+                    this.xDomain.min = minDomain;
+                    this.xDomain.max = maxDomain;
                 }
             } else if (o.xRange) {
-                this.xScale.domain([o.xRange.min, o.xRange.max])
+                this.xDomain.min = o.xRange.min;
+                this.xDomain.max = o.xRange.max;
             }
         }
 
@@ -121,9 +125,11 @@ export class RenderModel {
             }
             this.yRanges![i] = mm;
             if (yRange === 'auto') {
-                this.yScales[i].domain([mm.min, mm.max]);
+                this.yDomains[i].min = mm.min;
+                this.yDomains[i].max = mm.max;
             } else if (yRange) {
-                this.yScales[i].domain([yRange.min, yRange.max])
+                this.yDomains[i].min = yRange.min;
+                this.yDomains[i].max = yRange.max;
             }
         });
     }
@@ -145,8 +151,8 @@ export class RenderModel {
 
     pxPoint(dataPoint: DataPoint) {
         return {
-            x: this.xScale(dataPoint.x)!,
-            ys: this.yScales.map((yScale) => yScale(dataPoint.y)!),
+            x: convert(this.xDomain, this.xScreen, dataPoint.x),
+            ys: this.yDomains.map(domain => convert(domain, this.yScreen, dataPoint.y)),
         }
     }
 }

@@ -1,8 +1,8 @@
 import { ChartZoom } from "../chartZoom";
 import core from "../core";
-import { MinMax } from "../core/renderModel";
 import { ResolvedZoomOptions, TimeChartPlugins, ZoomOptions } from "../options";
 import { TimeChartPlugin } from ".";
+import { MinMax } from "../utils";
 import { ScaleLinear } from "d3-scale";
 
 export class TimeChartZoom {
@@ -10,7 +10,7 @@ export class TimeChartZoom {
         this.registerZoom(chart)
     }
 
-    private applyAutoRange(o: {scale: ScaleLinear<number, number>, autoRange: boolean, minDomain?: number, maxDomain?: number} | undefined, dataRange: MinMax | null) {
+    private applyAutoRange(o: {domain: MinMax, autoRange: boolean, minDomain?: number, maxDomain?: number} | undefined, dataRange: MinMax | null) {
         if (!o)
             return;
         if (!o.autoRange) {
@@ -18,7 +18,7 @@ export class TimeChartZoom {
             delete o.maxDomain;
             return;
         }
-        let [min, max] = o.scale.domain();
+        let [min, max] = [o.domain.min, o.domain.max];
         if (dataRange) {
             min = Math.min(min, dataRange.min);
             max = Math.max(max, dataRange.max);
@@ -33,8 +33,10 @@ export class TimeChartZoom {
         chart.model.updated.on(() => {
             this.applyAutoRange(o.x, chart.model.xRange);
 
-            for (let yRange of chart.model.yRanges ?? [null])
-                this.applyAutoRange(o.y, yRange);
+            (chart.model.yRanges ?? []).forEach((yRange, i) => {
+                if (!o.ys) return;
+                this.applyAutoRange(o.ys[i], yRange);
+            });
             z.update();
         });
         z.onScaleUpdated(() => {
@@ -59,24 +61,33 @@ export class TimeChartZoomPlugin implements TimeChartPlugin<TimeChartZoom> {
         return new Proxy(o, {
             get: (target, prop) => {
                 switch (prop) {
-                    case 'x':
-                    case 'y':
+                    case 'x': {
                         const op = target[prop];
-                        if (!op)
-                            return op;
+                        if (!op) return op;
                         return new Proxy(op, {
                             get: (target, prop2) => {
-                                if (prop2 === 'scale') {
-                                    switch (prop) {
-                                        case 'x':
-                                            return chart.model.xScale;
-                                        case 'y':
-                                            return chart.model.yScales;
-                                    }
-                                }
+                                if (prop2 === 'domain') return chart.model.xDomain;
+                                if (prop2 === 'range') return chart.model.xScreen;
                                 return (target as any)[prop2] ?? (defaults as any)[prop2];
                             }
+
+                        });
+                    }
+                    case 'ys': {
+                        const op = target.ys;
+                        if (!op) return op;
+                        return new Proxy(op, {
+                            get: (target, prop) => new Proxy(target[+(prop as string)], {
+                                get: (target, prop2) => {
+                                    const idx = +(prop as string);
+                                    if (prop2 === 'domain') return chart.model.yDomains[idx];
+                                    if (prop2 === 'range') return chart.model.yScreen;
+                                    return (target as any)[prop2] ?? (defaults as any)[prop2];
+                                }
+                            })
+                            
                         })
+                    }
                     case 'eventElement':
                         return chart.contentBoxDetector.node;
                     default:

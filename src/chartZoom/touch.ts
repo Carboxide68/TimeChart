@@ -1,4 +1,4 @@
-import { EventDispatcher } from '../utils';
+import { EventDispatcher, MinMax, convert } from '../utils';
 import { CapableElement, DIRECTION, dirOptions, Point, ResolvedAxisOptions, ResolvedOptions } from './options';
 import { applyNewDomain, linearRegression, scaleK, variance } from './utils';
 
@@ -32,8 +32,10 @@ export class ChartZoomTouch {
             if (!op) {
                 this.enabled[dir] = false;
             } else {
-                const domain = op.scale.domain().sort();
-                this.enabled[dir] = op.minDomain < domain[0] && domain[1] < op.maxDomain;
+                const domain = op.domain;
+                if (!domain) continue;
+                const d = domain.max - domain.min > 0 ? domain : {min: domain.max, max: domain.min};
+                this.enabled[dir] = op.minDomain < d.min && d.max < op.maxDomain;
             }
         }
     }
@@ -54,14 +56,14 @@ export class ChartZoomTouch {
 
     private calcKB(dir: DIRECTION, op: ResolvedAxisOptions, data: { current: number; domain: number}[]) {
         if (dir === this.majorDirection && data.length >= 2) {
-            const domain = op.scale.domain();
-            const extent = domain[1] - domain[0];
+            const domain = op.domain;
+            const extent = domain.max - domain.min;
             if (variance(data.map(d => d.domain)) > 1e-4 * extent * extent) {
                 return linearRegression(data.map(t => ({ x: t.current, y: t.domain })));
             }
         }
         // Pan only
-        const k = scaleK(op.scale);
+        const k = scaleK(op.domain, op.range);
         const b = data.map(t => t.domain - k * t.current).reduce((a, b) => a + b) / data.length;
         return { k, b };
     }
@@ -78,15 +80,14 @@ export class ChartZoomTouch {
         }]));
         let changed = false
         for (const {dir, op} of dirOptions(this.options)) {
-            const scale = op.scale;
             const temp = [...ts.entries()].map(([id, p]) => ({ current: p[dir], previousPoint: this.previousPoints.get(id) }))
                 .filter(t => t.previousPoint !== undefined)
-                .map(({ current, previousPoint }) => ({ current, domain: scale.invert(previousPoint![dir]) }));
+                .map(({ current, previousPoint }) => ({ current, domain: convert(op.range, op.domain, previousPoint![dir]) }));
             if (temp.length === 0) {
                 continue;
             }
             const { k, b } = this.calcKB(dir, op, temp);
-            const domain = scale.range().map(r => b + k * r);
+            const domain = {min: b + k * op.range.min, max: b + k * op.range.max};
             if (applyNewDomain(op, domain)) {
                 changed = true;
             }
