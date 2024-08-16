@@ -53,6 +53,11 @@ window.addEventListener('load', (_) => {
         x: {
           autoRange: true,
         },
+        ys: [{
+          autoRange: true,
+          autoRange: true,
+          autoRange: true,
+        }],
       },
 
   });
@@ -83,9 +88,16 @@ window.addEventListener('load', (_) => {
         x: {
           autoRange: true,
         },
+        ys: [{
+          autoRange: true,
+          autoRange: true,
+          autoRange: true,
+        }],
       },
   });
   const xdomain = {min: 0, max: 100};
   chart.syncX(xdomain);
   chart2.syncX(xdomain);
+  //chart.onResize()
+  //chart2.onResize()
 });

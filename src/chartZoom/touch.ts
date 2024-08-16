@@ -103,7 +103,7 @@ export class ChartZoomTouch {
     private dirOptions(dir: DIRECTION.X | DIRECTION.Y) {
         return {
             [DIRECTION.X]: this.options.x,
-            [DIRECTION.Y]: this.options.y,
+            [DIRECTION.Y]: (this.options.ys ?? [undefined])[0],
         }[dir];
     }
 

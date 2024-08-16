@@ -33,16 +33,17 @@ export class TimeChartZoom {
         chart.model.updated.on(() => {
             this.applyAutoRange(o.x, chart.model.xRange);
 
-            (chart.model.yRanges ?? []).forEach((yRange, i) => {
-                if (!o.ys) return;
-                this.applyAutoRange(o.ys[i], yRange);
-            });
+            if (o.ys) {
+                (chart.model.yRanges ?? [null]).forEach((yRange, i) => {
+                    this.applyAutoRange(o.ys![i], yRange);
+                });
             z.update();
+            }
         });
         z.onScaleUpdated(() => {
             if (chart.options.xRange !== 'synced')
                 chart.options.xRange = null;
-            for (let i = 0; i < chart.options.yRanges.length; i++) chart.options.yRanges[i] = null;
+            chart.options.yRanges.forEach(yR => yR = null);
             chart.options.realTime = false;
             chart.update();
         });
@@ -78,14 +79,20 @@ export class TimeChartZoomPlugin implements TimeChartPlugin<TimeChartZoom> {
                         const op = target.ys;
                         if (!op) return op;
                         return new Proxy(op, {
-                            get: (target, prop) => new Proxy(target[+(prop as string)], {
-                                get: (target, prop2) => {
-                                    const idx = +(prop as string);
-                                    if (prop2 === 'domain') return chart.model.yDomains[idx];
-                                    if (prop2 === 'range') return chart.model.yScreen;
-                                    return (target as any)[prop2] ?? (defaults as any)[prop2];
-                                }
-                            })
+                            get: (target, prop) => {
+                                if (!isNaN(Number(prop))) {
+                                    const t = target[Number(prop)];
+                                    if (!t) return t;
+                                    return new Proxy(target[Number(prop)], {
+                                        get: (target, prop2) => {
+                                            const idx = Number(prop);
+                                            if (prop2 === 'domain') return chart.model.yDomains[idx];
+                                            if (prop2 === 'range') return chart.model.yScreen;
+                                            return (target as any)[prop2] ?? (defaults as any)[prop2];
+                                    }
+                                    })
+                                } else return (target as any)[prop] ?? (defaults as any)[prop];
+                            }
                             
                         })
                     }

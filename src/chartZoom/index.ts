@@ -29,7 +29,7 @@ export class ChartZoom {
         options = options ?? {};
         this.options = new Proxy(options, {
             get(target, prop) {
-                if (prop === 'x' || prop === 'y') {
+                if (prop === 'x' || prop === 'ys') {
                     const op = target[prop];
                     if (!op)
                         return op;

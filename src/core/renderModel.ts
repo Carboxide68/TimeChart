@@ -38,11 +38,11 @@ export class RenderModel {
         this.xDomain = {min: 0, max: 0};
         this.xScreen = {min: 0, max: 0};
         this.yScreen = {min: 0, max: 0};
-        this.yDomains = options.series.map(_ => ({min: 0, max: 0}));
+        this.yDomains = options.series.map(_ => ({min: Infinity, max: -Infinity}));
         if (options.xRange !== 'auto' && options.xRange !== 'synced' && options.xRange) {
             this.xDomain = {min: options.xRange.min, max: options.xRange.max};
         }
-        options.yRanges.forEach( (yRange, i) => {
+        options.yRanges.forEach((yRange, i) => {
             if (yRange !== 'auto' && yRange) {
                 this.yDomains[i] = {min: yRange.min, max: yRange.max};
             }

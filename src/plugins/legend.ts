@@ -58,6 +58,17 @@ export class Legend {
         if (!this.options.legend)
             return;
 
+        let multY = this.options.series.length > 1;
+        let prefix = ((si: number) => {
+            if (!multY) return "";
+            if (si == 0) {
+                return "(←) ";
+            } else if (si == 1) {
+                return "(→) ";
+            } else {
+                return "( ) "
+            }
+        });
         for (const srs of this.options.series) {
             for (const s of srs) {
                 if (!s.inLegend) continue;
@@ -68,7 +79,7 @@ export class Legend {
                     example.className = 'example';
                     item.appendChild(example);
                     const name = document.createElement('label');
-                    name.textContent = s.name;
+                    name.textContent = prefix(s.yAxisN) + s.name;
                     item.appendChild(name);
                     this.itemContainer.appendChild(item);
 
