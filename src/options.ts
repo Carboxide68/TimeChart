@@ -109,7 +109,7 @@ export interface TimeChartSeriesOptions {
     visible: boolean;
     lineType: LineType;
     stepLocation: number;
-    minmax?: { min: number, max: number };
+    minmax: { min: number, max: number } | null;
     inLegend: boolean,
     yAxisN: number,
 }

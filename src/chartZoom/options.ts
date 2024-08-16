@@ -27,7 +27,7 @@ export interface ResolvedAxisOptions {
 
 export interface ResolvedOptions {
     x?: ResolvedAxisOptions;
-    y?: ResolvedAxisOptions;
+    ys?: ResolvedAxisOptions[];
     panMouseButtons: number;
     touchMinPoints: number;
     eventElement: CapableElement;
@@ -35,7 +35,7 @@ export interface ResolvedOptions {
 
 export interface ChartZoomOptions {
     x?: AxisOptions;
-    y?: AxisOptions;
+    ys?: AxisOptions[];
     panMouseButtons?: number;
     touchMinPoints?: number;
     eventElement?: CapableElement;
@@ -48,6 +48,6 @@ export interface CapableElement extends Element, ElementCSSInlineStyle {
 export function dirOptions(options: ResolvedOptions) {
     return [
         { dir: DIRECTION.X, op: options.x },
-        { dir: DIRECTION.Y, op: options.y },
+        ...(options.ys ?? []).map(y => ({dir: DIRECTION.Y, op: y})),
     ].filter(i => i.op !== undefined) as {dir: DIRECTION.X | DIRECTION.Y, op: ResolvedAxisOptions}[];
 }

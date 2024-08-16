@@ -31,17 +31,14 @@ export class RenderModel {
     xScale = scaleLinear();
     yScales: ScaleLinear<number, number, never>[];
     xRange: MinMax | null = null;
-    yRanges: (MinMax | null)[];
+    yRanges: MinMax[] | null = null;
 
     constructor(private options: ResolvedCoreOptions) {
         this.yScales = [];
-        for (let tmp in options.series) {
-            this.yScales.push(scaleLinear());
-        }
+        this.yScales = this.options.series.map(_ => scaleLinear());
         if (options.xRange !== 'auto' && options.xRange) {
             this.xScale.domain([options.xRange.min, options.xRange.max])
         }
-        this.yRanges = options.series.map( _ => null);
         options.yRanges.forEach( (yRange, i) => {
             if (yRange && yRange !== 'auto') {
                 this.yScales[i].domain([yRange.min, yRange.max])
@@ -75,13 +72,14 @@ export class RenderModel {
         this.updated.dispatch();
         for (const srs of this.options.series) {
             for (const s of srs) {
+                s.minmax = null;
                 s.data._synced();
             }
         }
     }
 
     updateModel() {
-        const series = this.options.series.map( srs => srs.filter( s => s.data.length > 0 ) ).filter(srs => srs.length > 0);
+        const series = this.options.series.map(srs => srs.filter(s => s.data.length > 0 )).filter(srs => srs.length > 0);
         if (series.length === 0) {
             return;
         }
@@ -104,22 +102,23 @@ export class RenderModel {
                 this.xScale.domain([o.xRange.min, o.xRange.max])
             }
         }
-        if (!this.yRanges) this.yRanges = new Array(o.yRanges.length);
+        this.yRanges = new Array<MinMax>(o.yRanges.length);
         o.yRanges.forEach( (yRange, i) => {
-            const minMaxY = series[i].flatMap(s => {
-                return [
-                    calcMinMaxY(s.data, 0, s.data.pushed_front),
-                    calcMinMaxY(s.data, s.data.length - s.data.pushed_back, s.data.length),
-                ];
+            let min = Infinity;
+            let max = -Infinity;
+            o.series[i].forEach(s => {
+                if (s.minmax === null) {
+                    s.minmax = calcMinMaxY(s.data, 0, s.data.length);
+                }
+                if (s.minmax.min < min) min = s.minmax.min;
+                if (s.minmax.max > max) max = s.minmax.max;
             });
-            this.yRanges[i] && minMaxY.push(this.yRanges[i]!);
+            this.yRanges![i] = {min, max};
 
-            this.yRanges[i] = unionMinMax(...minMaxY) ?? null;
-            if (!this.yRanges[i]) return;
             if (yRange === 'auto') {
-                this.yScales[i].domain([this.yRanges[i]!.min, this.yRanges[i]!.max]).nice();
+                this.yScales[i].domain([min, max]).nice();
             } else if (yRange) {
-                this.yScales[i].domain([yRange.min, yRange.max])
+                this.yScales[i].domain([yRange.min, yRange.max]);
             }
         });
     }

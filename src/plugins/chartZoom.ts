@@ -80,13 +80,19 @@ export class TimeChartZoomPlugin implements TimeChartPlugin<TimeChartZoom> {
                             }
                             case 'ys': {
                                 return new Proxy (op, {
-                                    get: (target, index) => new Proxy((target as AxisZoomOptions[])[+(index as string)], {
-                                        get: (target, prop2) => {
-                                            if (prop2 === 'scale')
-                                                return chart.model.yScales[+(index as string)];
-                                            return (target as any)[prop2] ?? (defaults as any)[prop2];
+                                    get: (target, index) => {
+                                        let idx = Number(index);
+                                        if (isNaN(idx)) {
+                                            return (target as any)[index];
                                         }
-                                    })
+                                        return new Proxy((target as AxisZoomOptions[])[idx], {
+                                            get: (target, prop2) => {
+                                                if (prop2 === 'scale')
+                                                    return chart.model.yScales[idx];
+                                                return (target as any)[prop2] ?? (defaults as any)[prop2];
+                                            }
+                                        });
+                                    }
                                 });
                             }
                         };

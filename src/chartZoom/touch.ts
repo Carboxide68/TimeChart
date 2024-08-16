@@ -100,10 +100,14 @@ export class ChartZoomTouch {
     }
 
     private dirOptions(dir: DIRECTION.X | DIRECTION.Y) {
-        return {
-            [DIRECTION.X]: this.options.x,
-            [DIRECTION.Y]: this.options.y,
-        }[dir];
+        switch(dir) {
+            case DIRECTION.X:
+                return this.options.x;
+            case DIRECTION.Y:
+                return (this.options.ys ?? [undefined])[0];
+            default:
+                return undefined;
+        }
     }
 
     private onTouchStart(event: TouchEvent) {

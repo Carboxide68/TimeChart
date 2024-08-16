@@ -26,7 +26,7 @@
         const data = [];
 
         let y = 10;
-        let timeStep = 100000000;
+        let timeStep = 100_000_000;
 
         for (let x = 0; x < 1000000 * timeStep; x = x + timeStep) {
             data.push({ x: x, y: y });
@@ -44,7 +44,6 @@
             ]],
             zoom: { x: { autoRange: true } },
             tooltip: { enabled: true },
-            renderPaddingLeft: 45,
         });
     </script>
 </body>

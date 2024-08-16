@@ -58,9 +58,15 @@ export class Legend {
         if (!this.options.legend)
             return;
 
+        const isMultY = this.options.series.length > 1;
+        let prefix = ((idx: number) => {
+            if (!isMultY) return "";
+            if (idx == 0) return "(←) ";
+            if (idx == 1) return "(→) ";
+            else return "( ) ";
+        });
         for (const srs of this.options.series) {
             for (const s of srs) {
-                if (!s.inLegend) continue;
                 if (!this.items.has(s)) {
                     const item = document.createElement('div');
                     item.className = 'item';
@@ -68,7 +74,7 @@ export class Legend {
                     example.className = 'example';
                     item.appendChild(example);
                     const name = document.createElement('label');
-                    name.textContent = s.name;
+                    name.textContent = prefix(s.yAxisN) + s.name;
                     item.appendChild(name);
                     this.itemContainer.appendChild(item);
 
